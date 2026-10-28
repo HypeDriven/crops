@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import { createHash } from 'node:crypto';
 import { createPlantGeometry, createRootGeometry, Build } from '../crop-model.js';
-import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar, soybeanAxisNodes, seeded, soybeanPodShape, soybeanPodSurface, sunflowerHead, sunflowerDiskLayout, fieldPlantTraits } from '../crops.js';
+import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar, soybeanAxisNodes, seeded, soybeanPodShape, soybeanPodSurface, sunflowerHead, sunflowerDiskLayout, fieldPlantTraits, organVariation, axisNodeFractions, soybeanBranches, cerealSpike, sunflowerRays, maizeKernel } from '../crops.js';
 import { drawCrop, drawTaproots } from '../crop-canvas.js';
 let cases=0;
 function verify(g,label){const count=g.getAttribute('position').count;assert(count>0,label);for(const name of ['position','normal','color','uv','organ']){const a=g.getAttribute(name);assert(a,label+': '+name);assert(Array.from(a.array).every(Number.isFinite),label+': finite '+name);}assert(Array.from(g.index.array).every(i=>i>=0&&i<count),label+': indices');assert(Number.isFinite(g.boundingSphere.radius)&&g.boundingSphere.radius>0,label+': bounds');}
@@ -52,7 +52,7 @@ console.log('Passed positional leaf development, shoot termination, convergent t
 for(const season of ['spring','summer'])for(const maturity of [.26,.5,.619,.62,.65,.85,1])for(const seed of [1,1847,9923])for(const detail of [false,true]){
  const s={crop:'soybean',season,maturity,seed},h=cropDimensions(s).h,g=createPlantGeometry(s,seed,detail),p=g.attributes.position,o=g.attributes.organ;
  const axes=[{start:new THREE.Vector3(),end:new THREE.Vector3(.014,h,0),count:season==='summer'?7:3,main:true}];
- if(season==='summer')for(let branch=0;branch<3;branch++){const a=branch*2.39996+.8;axes.push({start:new THREE.Vector3(.0024,h*.17,0),end:new THREE.Vector3(Math.cos(a)*.13,h*(.56+branch*.035),Math.sin(a)*.13),count:4,seed:branch*113+59});}
+ if(season==='summer')for(const branch of soybeanBranches(s))axes.push({start:new THREE.Vector3(...branch.start),end:new THREE.Vector3(...branch.end),count:4,seed:branch.nodeSeed});
  // Main axis uses the first seeded random number for developmental variation.
  const random=seeded(seed);
  for(const axis of axes){const length=axis.main?h:axis.start.distanceTo(axis.end),nodes=soybeanAxisNodes(s,length,axis.count,axis.main?Math.floor(random()*100000):axis.seed),last=nodes.at(-1),at=axis.start.clone().lerp(axis.end,last.t);
@@ -61,15 +61,15 @@ for(const season of ['spring','summer'])for(const maturity of [.26,.5,.619,.62,.
   let attachment=Infinity,leaf=Infinity;
   for(let i=0;i<p.count;i++){const q=new THREE.Vector3().fromBufferAttribute(p,i);if(o.array[i]===0)attachment=Math.min(attachment,q.distanceTo(at));if(o.array[i]===6)leaf=Math.min(leaf,q.distanceTo(axis.end));}
   assert(attachment<.00001,`Final petiole actually joins axis: ${season}/${maturity}/${seed}/${axis.main?'main':'branch'}`);
-  assert(leaf<.030,'Leaflets remain beside every green shoot tip');
+  assert(leaf<.047,'Leaflets remain beside every green shoot tip');
  }
  g.dispose();
 }
 console.log('Passed soybean main and branch apex attachments across growth arrest, both detail levels, and varied seeds.');
 
 // Continuous, gently compressed soybean valves and fine, short surface hairs.
-for(const seeds of [2,3]){const shape=soybeanPodShape({maturity:.65},seeds,21);assert(shape.length>.039&&shape.length<.060);assert(shape.width>=.008&&shape.width<=.015);assert(shape.depth<shape.width);assert.equal(soybeanPodSurface(0,0,shape)[0],0);assert.equal(soybeanPodSurface(1,0,shape)[0],0);
- for(let k=1;k<seeds;k++){const between=(shape.centers[k-1]+shape.centers[k])/2;assert(soybeanPodSurface(between,0,shape)[0]>shape.width*.36,'Continuous pod wall does not pinch into disconnected beads');}}
+for(const seeds of [2,3]){const shape=soybeanPodShape({maturity:.65},seeds,21);assert(shape.length>.030&&shape.length<.080);assert(shape.width>=.007&&shape.width<=.019);assert(shape.depth<shape.width);assert.equal(soybeanPodSurface(0,0,shape)[0],0);assert.equal(soybeanPodSurface(1,0,shape)[0],0);
+ for(let k=1;k<seeds;k++){const between=(shape.centers[k-1]+shape.centers[k])/2;assert(soybeanPodSurface(between,0,shape)[0]>shape.width*.32,'Continuous pod wall does not pinch into disconnected beads');}}
 const fuzzy=createPlantGeometry({crop:'soybean',season:'summer',maturity:.65,seed:1847},1847,true),hairPoints=[];
 for(let i=0;i<fuzzy.attributes.organ.count;i++)if(fuzzy.attributes.organ.array[i]===3)hairPoints.push(new THREE.Vector3().fromBufferAttribute(fuzzy.attributes.position,i));
 assert(hairPoints.length>30000,'Pubescence is present on close-up organs');assert.equal(hairPoints.length%10,0);
@@ -80,3 +80,24 @@ const early=sunflowerHead({crop:'sunflower',season:'summer',maturity:.2,seed:184
 const azimuths=Array.from({length:8000},(_,seed)=>fieldPlantTraits({crop:'sunflower',maturity:.65,variation:.24},seed).azimuth),mean=azimuths.reduce((a,b)=>a+b,0)/azimuths.length,sd=Math.sqrt(azimuths.reduce((a,b)=>a+(b-mean)**2,0)/azimuths.length);assert(Math.abs(mean)<.04&&sd>.69&&sd<.79,'Easterly population has the published approximate azimuth spread');
 for(const crop of Object.keys(CROPS)){const s={crop,maturity:.65,variation:.24};for(let seed=0;seed<200;seed++){const t=fieldPlantTraits(s,seed);assert(t.height>.85&&t.height<1.16&&t.breadth>.85&&t.breadth<1.16);assert(Math.abs(t.stage-s.maturity)<.034);assert.deepEqual(t,fieldPlantTraits(s,seed));}const z=fieldPlantTraits({...s,variation:0},8);assert.equal(z.height,1);assert.equal(z.breadth,1);assert.equal(z.stage,s.maturity);}
 console.log('Passed continuous soybean pod walls, fine pubescence, sunflower floret packing, ray overlap, head droop, and seeded population distribution checks.');
+
+// Within-plant variation, correlation, identity stability, and safe extremes.
+const sampleState={crop:'maize',season:'summer',maturity:.65,seed:1847,variation:.24};
+const samples=Array.from({length:600},(_,i)=>organVariation(sampleState,'leaf',i)),avg=xs=>xs.reduce((a,b)=>a+b,0)/xs.length,stdev=xs=>Math.sqrt(avg(xs.map(x=>(x-avg(xs))**2)));
+assert(stdev(samples.map(q=>q.length))>.09,'Individual organs have visible length variation');
+assert(stdev(samples.map(q=>q.width/q.length))>.08,'Width does not merely follow uniform scaling');
+const lengths=samples.map(q=>Math.log(q.length)),widths=samples.map(q=>Math.log(q.width)),cov=avg(lengths.map((x,i)=>(x-avg(lengths))*(widths[i]-avg(widths)))),correlation=cov/(stdev(lengths)*stdev(widths));
+assert(correlation>.20&&correlation<.85,'Length and width are related but not identical');
+for(let i=0;i<30;i++){const q=organVariation(sampleState,'leaf',i);assert.deepEqual(q,organVariation({...sampleState,detail:true},'leaf',i),'LOD does not reseed an organ');assert.deepEqual(q,organVariation({...sampleState,cutaway:true},'leaf',i),'Cutaway does not reseed an organ');assert.notDeepEqual(q,organVariation(sampleState,'leaf',i+1));}
+const noVariation={...sampleState,variation:0},noOrgan=organVariation(noVariation,'leaf',9);for(const key of ['length','width','depth','spacing','petiole','density'])assert.equal(noOrgan[key],1);
+const nominal=[.07,.19,.32,.46,.61,.74,.91];assert.deepEqual(axisNodeFractions(noVariation,nominal),nominal);const uneven=axisNodeFractions(sampleState,nominal);assert.equal(uneven[0],nominal[0]);assert.equal(uneven.at(-1),nominal.at(-1));assert(uneven.slice(1).every((v,i)=>v>uneven[i]));assert(uneven.some((v,i)=>Math.abs(v-nominal[i])>.004),'Internal nodes change spacing');
+for(const crop of Object.keys(CROPS))for(const seed of [1,9923])for(const detail of [false,true]){const s={crop,season:'summer',maturity:.65,seed,variation:1,cutaway:false},g=createPlantGeometry(s,seed,detail);verify(g,`Maximum variation ${crop}/${seed}/${detail}`);g.dispose();if(crop!=='wheat')drawCrop(mock,s,0,600,400,seed,detail);}
+for(const seed of [1,31,1847,9923]){
+ const s={crop:'maize',season:'summer',maturity:.65,seed,variation:1},e=maizeEar(s),g=createPlantGeometry(s,seed,true),base=new THREE.Vector3(...e.base),axis=new THREE.Vector3(...e.direction).normalize();
+ for(let i=0;i<g.attributes.position.count;i++)if(g.attributes.organ.array[i]===8){const v=new THREE.Vector3().fromBufferAttribute(g.attributes.position,i).sub(base),y=v.dot(axis);if(y<0||y>e.length+.01)continue;const t=(y+.008)/(e.length*1.09),radius=v.addScaledVector(axis,-y).length(),husk=e.radius*1.26*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.43)*(1-.24*t);assert(radius<husk+.00012,'Varied ear still encloses every kernel');}g.dispose();
+ const f=sunflowerHead({...s,crop:'sunflower',variation:.24}),rays=sunflowerRays(f);for(let i=0;i<rays.length;i++){const a=rays[i],b=rays[(i+1)%rays.length],angle=(b.angle-a.angle+Math.PI*2)%(Math.PI*2),spacing=(f.radius+(a.length+b.length)*.25)*angle;assert(f.rayWidth*(a.width+b.width)*.5>spacing,'Varied rays keep overlapping breadth');}
+ const branches=soybeanBranches({...s,crop:'soybean'});assert(new Set(branches.map(b=>b.radius.toFixed(6))).size>1,'Branches have distinct thicknesses');
+}
+console.log('Passed organ-size distributions, aspect ratios, correlation, nonuniform internodes, identity stability, maximum-variation meshes/Canvas, and reproductive containment.');
+
+for(const seed of [1,1847,9923]){const s={crop:'maize',season:'summer',maturity:.65,seed,variation:1},nodes=axisNodeFractions(s,Array.from({length:15},(_,i)=>.07+i/14*.84)),h=cropDimensions(s).h;assert.equal(maizeEar(s).base[1],h*nodes[8],'Primary ear stays at a varied leaf axil');assert.equal(maizeEar(s,true).base[1],h*nodes[6],'Secondary ear stays at a lower axil');}

@@ -29,16 +29,16 @@ export function inspection(s,part){const d=cropDimensions(s),h=d.h,c=s.crop||'wh
  if(part==='ear'){
   if(c==='wheat'){target=[.012,h+.058,0];span=.3;title='Anatomy of an ear.';desc='Alternating spikelets bear several florets, enclosed by glumes, lemmas and paleas.';}
   if(c==='barley'){target=[.012,h+.075,0];span=.39;title='Two rows. Long awns.';desc='One fertile central spikelet per triplet forms two grain rows. The lateral spikelets remain sterile in this two-row form.';}
-  if(c==='maize'){target=[.09,h*.57+.10,.11];span=.46;title='A silk-bearing ear.';desc=s.cutaway?'The husk is peeled back to expose paired rows of kernels on the cob. The kernel arrangement is a representative 14-row ear.':'The female ear sits in a leaf axil. Husk leaves enclose the cob; silks emerge from its tip. Enable the cutaway to inspect kernels.';}
-  if(c==='sunflower'){target=sunflowerHead(s).center;span=.40;title=s.maturity>.78?'From florets to achenes.':'A composite flower head.';desc='Yellow rays are individual florets. Hundreds of disk florets occupy a spiral pattern above overlapping green involucral bracts.';}
-  if(c==='soybean'){target=[.016,h*.54-.024,.010];span=s.maturity<.3?.13:.15;title=s.maturity<.3?'Flowers at the leaf axils.':'Pods at the leaf axils.';desc=s.cutaway?'Opened pods reveal representative two- or three-seeded fruits. Nodules are modelled on the root system.':'Pendulous, gently curved pods have a continuous wall around two or three seeds, paired sutures, tapered tips and fine surface hairs. The seeds themselves are smooth.';}
+  if(c==='maize'){const ear=maizeEar(s);target=[ear.base[0]+.035,ear.base[1]+ear.length*.45,ear.base[2]+.04];span=Math.max(.38,ear.length*2.05);title='A silk-bearing ear.';desc=s.cutaway?'The husk is peeled back to expose paired rows of kernels on the cob. The kernel arrangement is a representative 14-row ear.':'The female ear sits in a leaf axil. Husk leaves enclose the cob; silks emerge from its tip. Enable the cutaway to inspect kernels.';}
+  if(c==='sunflower'){const head=sunflowerHead(s);target=head.center;span=2.3*(head.radius+head.rayLength*1.15);title=s.maturity>.78?'From florets to achenes.':'A composite flower head.';desc='Yellow rays are individual florets. Hundreds of disk florets occupy a spiral pattern above overlapping green involucral bracts.';}
+  if(c==='soybean'){const node=soybeanStudyNode(s);target=[node.position[0]+.008,node.position[1]-.027,0];span=s.maturity<.3?.13:.17;title=s.maturity<.3?'Flowers at the leaf axils.':'Pods at the leaf axils.';desc=s.cutaway?'Opened pods reveal representative two- or three-seeded fruits. Nodules are modelled on the root system.':'Pendulous, gently curved pods have a continuous wall around two or three seeds, paired sutures, tapered tips and fine surface hairs. The seeds themselves are smooth.';}
  }else if(part==='tip'){const term=shootTermination(s);target=[s.crop==='soybean'?.014:0,h*(d.reproductive?1:.90),0];span=s.crop==='maize'?.50:profile(s).cereal?.26:.24;title=term==='tassel'?'A terminal male tassel.':term==='capitulum'?'The shoot ends in a head.':term==='terminal-spike'?'A terminal cereal spike.':term==='cut-stubble'?'A harvested stem.':term==='arrested-bud'?'The uppermost trifoliate.':'The youngest leaves.';desc=term==='arrested-bud'?'Stem extension has stopped. The final trifoliate remains immediately below a compact terminal bud; its leaflets are expanded rather than continually unfolding.':d.reproductive&&!['young-trifoliate','arrested-bud'].includes(term)?'The vegetative shoot has become a terminal inflorescence. New foliage is not added above the flowers.':'Young leaves near the apex are smaller, paler, less expanded and more folded than older leaves below them.';}else if(part==='flower'){target=[0,h+.12,0];span=.5;title='The male inflorescence.';desc='The terminal tassel branches into spikelet-bearing axes. Anthers are present near the silking stage; pollen grains are not individually simulated.';}
  else if(part==='leaf'){const fraction=c==='maize'?.64:c==='sunflower'?.57:c==='soybean'?.58:.71;target=[p.cereal?.05:.07,h*fraction+.025,0];span=c==='maize'?.58:c==='sunflower'?.38:c==='soybean'?.23:.29;title=c==='soybean'?'One leaf, three leaflets.':c==='sunflower'?'Veins, teeth, and hairs.':'A blade, in detail.';desc=c==='soybean'?'A larger terminal leaflet and two smaller, oblique lateral leaflets have rounded bases, entire margins and short petiolules. Fine hairs cover the matte surfaces, petiole and stem.':c==='sunflower'?'A petiole supports a broad, serrate, cordate blade with branching veins. Lower leaves are opposite; later leaves are alternate.':c==='maize'?'A broad parallel-veined blade joins a clasping sheath at the collar. Maize lacks the clasping auricles seen in barley.':c==='barley'?'Broad, smooth auricles clasp the culm. Longitudinal veins and a membranous ligule mark the blade–sheath junction.':'Parallel veins, a folded midrib, a membranous ligule, and paired hairy auricles.';}
  else if(part==='root'){target=[0,-.17,0];span=.72;title=c==='soybean'?'A nodulated taproot.':c==='sunflower'?'A branching taproot.':c==='maize'?'Crown roots and braces.':'An underground network.';desc=c==='soybean'?'Lateral roots branch from the taproot. Visible nodules represent symbiotic structures; their number is illustrative.':c==='sunflower'?'A dominant taproot gives rise to laterals and fine branches. Only the upper 45 cm are shown.':c==='maize'?'Nodal roots form a fibrous system. Above-ground brace roots descend from basal stalk nodes toward the soil.':'Seminal and crown roots branch into fine laterals. Only the upper 45 cm are shown.';}
  if(d.residue&&part==='root'){title='Root remnants after harvest.';desc='The upper root system is retained as dead residue. Fine-root persistence is illustrative; only the upper 45 cm are shown.';}if(d.residue&&part!=='root'){title='The remaining stubble.';desc='A harvested spring annual retains dead stems and root remnants; living leaves, flowers, and fruits are absent.';}
  return{target,span,title,desc};}
 export function anatomyLabels(s,part){const h=cropDimensions(s).h,p=profile(s),c=s.crop||'wheat';if(cropDimensions(s).residue){if(part==='root')return [['Dead root collar',0,0,0],['Root remnant',.04,-.10,0],['Deep truncation',0,-.38,0]];return [['Cut stem',0,h,0],['Dead stem node',0,h*.36,0],['Root collar',0,0,0]];}if(part==='root')return c==='soybean'?[['Root crown',0,0,0],['Nodules on lateral roots',.035,-.09,0],['Taproot',0,-.3,0]]:c==='sunflower'?[['Root collar',0,0,0],['Lateral roots',.08,-.13,0],['Taproot',0,-.32,0]]:c==='maize'?[['Brace roots',.06,.045,.03],['Nodal root crown',.02,-.03,0],['Fine laterals',.08,-.27,0]]:[['Crown · basal tillers',.01,0,0],['Crown roots',.045,-.11,0],['Fine lateral roots',.08,-.27,0]];
- if(part==='tip'){const t=shootTermination(s);return [[t==='leaf-whorl'?'Emerging rolled blades':t==='young-trifoliate'?'Unfolding trifoliate':t==='young-simple-leaves'?'Young folded leaves':t==='arrested-bud'?'Compact terminal bud':'Terminal structure',0,h*(cropDimensions(s).reproductive?1:.90),0],[c==='soybean'?'Uppermost trifoliate':'Upper node',c==='soybean'?.014:0,h*(c==='soybean'?.997:.85),0]];}if(part==='ear'){if(c==='maize')return[[s.cutaway?'Kernel rows':'Husk leaves',.09,h*.57+.085,.035],['Silks',.14,h*.57+.20,.02],['Ear shank',.025,h*.57,0]];if(c==='sunflower')return[['Ray florets',.12,h+.055,.02],['Disk florets',.025,h+.02,.04],['Involucral bracts',.075,h-.07,0]];if(c==='soybean')return[[s.cutaway?'Seeds in opened pod':'Hairy pod & seed bulges',.045,h*.54,.02],['Petiole / leaf axil',.015,h*.58,0],['Pod seam',.07,h*.51,.02]];return[[c==='barley'?'Long lemma awns':'Awn · lemma extension',.015,h+(c==='barley'?.18:.14),0],[c==='barley'?'Fertile central spikelet':'Spikelet · glumes & florets',.015,h+.055,0],['Rachis · spike axis',.005,h+.01,0]];}
+ if(part==='tip'){const t=shootTermination(s);return [[t==='leaf-whorl'?'Emerging rolled blades':t==='young-trifoliate'?'Unfolding trifoliate':t==='young-simple-leaves'?'Young folded leaves':t==='arrested-bud'?'Compact terminal bud':'Terminal structure',0,h*(cropDimensions(s).reproductive?1:.90),0],[c==='soybean'?'Uppermost trifoliate':'Upper node',c==='soybean'?.014:0,h*(c==='soybean'?.997:.85),0]];}if(part==='ear'){if(c==='maize'){const ear=maizeEar(s),[x,y,z]=ear.base;return[[s.cutaway?'Kernel rows':'Husk leaves',x+.035,y+ear.length*.45,z],['Silks',x+.08,y+ear.length,z+.04],['Ear shank',x,y,z]];}if(c==='sunflower')return[['Ray florets',.12,h+.055,.02],['Disk florets',.025,h+.02,.04],['Involucral bracts',.075,h-.07,0]];if(c==='soybean'){const [x,y,z]=soybeanStudyNode(s).position;return[[s.cutaway?'Seeds in opened pod':'Hairy pod & seed bulges',x+.012,y-.028,z],['Petiole / leaf axil',x,y,z],['Pod seam',x+.02,y-.048,z]];}return[[c==='barley'?'Long lemma awns':'Awn · lemma extension',.015,h+(c==='barley'?.18:.14),0],[c==='barley'?'Fertile central spikelet':'Spikelet · glumes & florets',.015,h+.055,0],['Rachis · spike axis',.005,h+.01,0]];}
  if(part==='flower')return[['Tassel axis',0,h+.12,0],['Spikelets & anthers',.07,h+.18,0],['Peduncle',0,h+.01,0]];
  if(part==='leaf'){const data=inspection(s,part),y=data.target[1]-.025;return p.cereal?[['Parallel venation',.1,y+.055,0],[c==='barley'?'Clasping smooth auricles':'Ligule & auricles',.003,y,0],['Leaf sheath',0,y-.06,0]]:c==='maize'?[['Parallel venation',.18,y+.09,0],['Ligule · no auricles',0,y,0],['Clasping sheath',0,y-.06,0]]:c==='soybean'?[['Terminal leaflet',.14,y+.035,0],['Lateral leaflets',.08,y+.04,.04],['Petiole',.03,y+.01,0]]:[['Serrate margin',.15,y+.03,0],['Reticulate venation',.1,y+.025,0],['Petiole',.04,y+.015,0]];}
  return[[p.cereal?'Flag leaf':c==='soybean'?'Trifoliate leaf':'Leaf blade',.1,h*.65,0],[p.cereal?'Node & leaf sheath':'Stem node',.01,h*.36,0],['Root crown',0,0,0]];}
@@ -55,18 +55,18 @@ export function leafDevelopment(s,rank,count,seed=0){
  const expansion=emerging?(u>.98?.23:.60):1;
  const envelope=c==='maize'?.48+.52*Math.sin(Math.PI*(u*.88+.06)):c==='sunflower'?.48+.52*Math.sin(Math.PI*(u*.86+.09)):c==='soybean'?.64+.36*Math.sin(Math.PI*(u*.83+.10)):.72+.28*Math.sin(Math.PI*(u*.73+.13));
  const senescence=d.residue?1:s.season==='summer'?Math.max(0,(s.maturity-(.54+.34*u))/.46)*Math.pow(age,.7):0;
- const r=seeded(seed+rank*1301),jitter=.96+r()*.08,size=envelope*expansion*jitter;
- const base=cropColors(s),leaf=mixHex(base.leaf,'#b4b96c',emerging?.20:0),color=mixHex(leaf,'#a28d4a',senescence*.72);
- return{rank,relativeAge:age,expansion,size,widthFactor:Math.sqrt(expansion)*envelope,fold:emerging?1-expansion:0,droop:.16+age*.35+senescence*.22,color,senescence,emerging};
+ const q=organVariation({...s,plantSeed:s.plantSeed??s.seed??seed},'leaf',rank,s.axisId??0),size=envelope*expansion*q.length;
+ const base=cropColors(s),leaf=mixHex(base.leaf,'#b4b96c',emerging?.20:0),color=mixHex(mixHex(leaf,q.shade>0?'#abc17e':'#304f2b',Math.abs(q.shade)), '#a28d4a',senescence*.72);
+ return{rank,relativeAge:age,expansion,size,widthFactor:Math.sqrt(expansion)*envelope*q.width,aspectRatio:q.width/q.length,fold:emerging?1-expansion:Math.max(0,q.curl*.25),droop:.16+age*.35+senescence*.22+q.pitch,angle:q.angle,pitch:q.pitch*1.8,twist:q.twist,curl:q.curl,asymmetry:q.asymmetry,petioleFactor:.65*q.petiole,seed:q.seed,variation:s.variation??.24,color,senescence,emerging};
 }
 export function sunflowerHead(s){const seed=s.plantSeed??s.seed??1847,r=seeded(seed+3841),v=Math.min(1.6,(s.variation??.24)/.24),m=s.maturity,h=cropDimensions(s).h,bud=m<.12,post=m>.76;
  const size=Math.exp(boundedNormal(r)*.045*v),tilt=Math.max(-1.45,Math.min(.8,(bud?.62:.28-(m-.12)*1.12)-Math.max(0,m-.72)*2.3+boundedNormal(r)*.11*v));
  const yaw=s.headYaw??boundedNormal(r)*.12*v,roll=boundedNormal(r)*.045*v,radius=(bud?.028+m*.24:.088+m*.035)*size;
  const rayCount=Math.max(32,Math.min(46,Math.round(38+boundedNormal(r)*2.4))),rayLength=(.040+Math.min(m,.6)*.012)*size;
- return{seed,center:[.012*Math.sin(h*2)+Math.sin(yaw)*.055,h-Math.max(0,m-.70)*.20,.055+Math.max(0,m-.70)*.16],tilt,yaw,roll,radius,rayLength,rayCount,rayWidth:Math.PI*2*(radius+rayLength*.5)/rayCount*1.20,
+ return{seed,variation:s.variation??.24,center:[.012*Math.sin(h*2)+Math.sin(yaw)*.055,h-Math.max(0,m-.70)*.20,.055+Math.max(0,m-.70)*.16],tilt,yaw,roll,radius,rayLength,rayCount,rayWidth:Math.PI*2*(radius+rayLength*.5)/rayCount*1.20,
   diskCount:Math.round((1600+boundedNormal(r)*120)*size*size),bud,post,flowerFront:Math.sqrt(Math.max(0,1-Math.max(0,m-.12)/.64)),wilt:Math.max(0,(m-.72)/.28)};
 }
-export function maizeEar(s,secondary=false){const h=cropDimensions(s).h,f=secondary?.45:1;return{base:[secondary?-.048:.055,h*(secondary?.44:.57),secondary?.025:.065],direction:[secondary?-.28:.32,.87,.39],length:(.17+s.maturity*.075)*f,radius:(.026+s.maturity*.013)*f,rows:14,kernels:32,scale:f};}
+export function maizeEar(s,secondary=false){const h=cropDimensions(s).h,f=secondary?.45:1,q=organVariation(s,'ear',secondary?1:0),nodes=axisNodeFractions(s,Array.from({length:15},(_,i)=>.07+i/14*.84));return{base:[secondary?-.048:.055,h*nodes[secondary?6:8],secondary?.025:.065],direction:[(secondary?-.28:.32)+q.angle,.87, .39+q.pitch],length:(.17+s.maturity*.075)*f*q.length,radius:(.026+s.maturity*.013)*f*q.width,rows:14,kernels:32,scale:f};}
 export function shootTermination(s){const d=cropDimensions(s);if(d.residue)return 'cut-stubble';if(d.reproductive)return s.crop==='soybean'&&s.maturity<.62?'young-trifoliate':s.crop==='sunflower'?'capitulum':s.crop==='maize'?'tassel':s.crop==='soybean'?'arrested-bud':'terminal-spike';return profile(s).cereal||s.crop==='maize'?'leaf-whorl':s.crop==='soybean'?'young-trifoliate':'young-simple-leaves';}
 
 // Upper soybean internodes shorten toward the apex. The final trifoliate remains
@@ -74,11 +74,11 @@ export function shootTermination(s){const d=cropDimensions(s);if(d.residue)retur
 // Both renderers use physical axis length so branches cannot end in bare poles.
 export function soybeanAxisNodes(s,length,count,seed=0){
  const r=seeded(seed),gap=Math.min(length*.018,.0012+r()*.0010),last=1-gap/length;
- return Array.from({length:count},(_,rank)=>{
-  const u=count>1?rank/(count-1):1,t=.16+(last-.16)*(1-Math.pow(1-u,1.45));
-  const dev=leafDevelopment(s,rank,count,seed),uppermost=rank===count-1;
+ const nominal=Array.from({length:count},(_,rank)=>{const u=count>1?rank/(count-1):1;return .16+(last-.16)*(1-Math.pow(1-u,1.45));}),fractions=axisNodeFractions(s,nominal,seed,true);
+ return fractions.map((t,rank)=>{
+  const dev=leafDevelopment({...s,axisId:seed},rank,count,seed),uppermost=rank===count-1;
   if(uppermost&&!dev.emerging)dev.size*=.72;
-  return {t,uppermost,dev:{...dev,petioleFactor:uppermost?.36:.65,elevation:uppermost&&dev.emerging?.8:0}};
+  return {t,uppermost,dev:{...dev,petioleFactor:dev.petioleFactor*(uppermost?.36/.65:1),elevation:uppermost&&dev.emerging?.8:0}};
  });
 }
 
@@ -86,18 +86,18 @@ export function soybeanAxisNodes(s,length,count,seed=0){
 export function soybeanLeafSurface(t,v,L,W,dev={}){
  const shape=t<=0||t>=1?0:Math.pow(Math.sin(Math.PI*Math.pow(t,.78)),.82);
  const asym=dev.oblique||0,side=v*W*.5*shape*(1+asym*v*(1-t));
- const fold=dev.fold||0,arch=L*(.085*Math.sin(Math.PI*t)-(.05+(dev.relativeAge||0)*.07)*t*t);
- return [L*t,arch+Math.abs(v)*W*shape*(.035+fold*.48)+L*t*Math.sin(dev.elevation||0),side*(1-fold*.60)];
+ const fold=dev.fold||0,arch=L*((.085+(dev.curl||0)*.20)*Math.sin(Math.PI*t)-(.05+(dev.relativeAge||0)*.07)*t*t)+(dev.twist||0)*side*t;
+ return [L*t,arch+Math.abs(v)*W*shape*(.035+fold*.48)+L*t*(Math.sin(dev.elevation||0)+(dev.pitch||0)),side*(1-fold*.60)];
 }
 export function soybeanPodShape(s,seeds=3,seed=0){
  const r=seeded(seed),fill=Math.max(.08,Math.min(1,(s.maturity-.27)/.35));
- const length=(seeds===2?.041:.054)*( .96+r()*.08),width=.0105+fill*.002,depth=.003+fill*.005;
- return {seeds,length,width,depth,fill,centers:Array.from({length:seeds},(_,i)=>(i+.65)/(seeds+.3))};
+ const q=organVariation(s,'pod',seed),length=(seeds===2?.041:.054)*q.length,width=(.0105+fill*.002)*q.width,depth=Math.min(width*.80,(.003+fill*.005)*q.depth);
+ return {seeds,length,width,depth,fill,curvature:.065+q.curl*.24,bulge:.06*q.depth,seedSizes:Array.from({length:seeds},(_,i)=>{const q=organVariation(s,'seed',i,seed);return{length:1+(q.length-1)*.3,width:1+(q.width-1)*.3,depth:1+(q.depth-1)*.3};}),centers:Array.from({length:seeds},(_,i)=>(i+.65)/(seeds+.3))};
 }
 export function soybeanPodSurface(t,a,p){
  const envelope=t<=0||t>=1?0:Math.pow(Math.sin(Math.PI*t),.40);
- const bulge=.94+.06*Math.cos((t*p.seeds-.55)*Math.PI*2);
- return [Math.cos(a)*p.width*.5*envelope*bulge,p.length*t,Math.sin(a)*p.depth*.5*envelope*bulge+p.length*.065*Math.sin(Math.PI*t)];
+ const bulge=1-p.bulge+p.bulge*Math.cos((t*p.seeds-.55)*Math.PI*2);
+ return [Math.cos(a)*p.width*.5*envelope*bulge,p.length*t,Math.sin(a)*p.depth*.5*envelope*bulge+p.length*p.curvature*Math.sin(Math.PI*t)];
 }
 // Normal variates are bounded at 2.5 SD to avoid malformed outliers. Size,
 // breadth and extension share a vigour term; ranks and season remain coherent.
@@ -114,6 +114,48 @@ export function sunflowerDiskLayout(f,detail=true){
  const count=detail?f.diskCount:180,r=seeded(f.seed+902),cell=f.radius/Math.sqrt(count);
  return Array.from({length:count},(_,k)=>{const a=k*2.399963229728653,R=f.radius*Math.sqrt((k+.5)/count)*.993;
   const x=Math.cos(a)*R+(r()-.5)*cell*.07,y=Math.sin(a)*R+(r()-.5)*cell*.07,fraction=R/f.radius;
-  return {x,y,fraction,angle:a,size:cell*(.94+r()*.09),phase:f.post?'seed':fraction<f.flowerFront-.055?'bud':fraction>f.flowerFront+.055?'spent':'flower'};
+  const q=organVariation({plantSeed:f.seed,variation:f.variation},'disk-floret',k),front=f.flowerFront+.010*Math.sin(a*3)+q.pitch*.035;return {x,y,fraction,angle:a,size:cell*Math.max(.87,Math.min(1.06,q.width)),height:q.depth,length:1+(q.length-1)*.20,width:1+(q.width-1)*.20,phase:f.post?'seed':fraction<front-.055?'bud':fraction>front+.055?'spent':'flower'};
  });
+}
+
+// Independent random streams are keyed by biological identity, never triangle
+// count or drawing order. The same organ therefore survives LOD/renderer changes.
+export function organVariation(s,kind,index=0,axis=0){
+ const plantSeed=s.plantSeed??s.seed??1847,a=Math.min(2,Math.max(0,(s.variation??.24)/.24));
+ const hash=x=>{let h=2166136261;for(const c of String(x))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
+ const identity=hash(`${plantSeed}/${axis}/${kind}/${index}`),r=seeded(identity),parent=boundedNormal(seeded(hash(`${plantSeed}/${axis}/vigour`))),local=boundedNormal(r),widthNoise=boundedNormal(r);
+ const positive=(x,lo=.68,hi=1.42)=>Math.max(lo,Math.min(hi,Math.exp(x*a)));
+ return {seed:identity,strength:a,length:positive(parent*.035+local*.115),width:positive(parent*.030+local*.055+widthNoise*.105),depth:positive(local*.04+boundedNormal(r)*.075),
+  petiole:positive(parent*.025+local*.05+boundedNormal(r)*.11),angle:boundedNormal(r)*a*.11,pitch:boundedNormal(r)*a*.075,
+  curl:boundedNormal(r)*a*.07,twist:boundedNormal(r)*a*.12,asymmetry:boundedNormal(r)*a*.09,
+  spacing:positive(parent*.025+boundedNormal(r)*.15),shade:boundedNormal(r)*a*.035,density:positive(boundedNormal(r)*.12),taper:positive(boundedNormal(r)*.09)};
+}
+export function axisNodeFractions(s,fractions,axis=0,shortenTip=false){
+ if(fractions.length<3)return [...fractions];
+ const lengths=fractions.slice(1).map((t,i)=>(t-fractions[i])*organVariation(s,'internode',i,axis).spacing);
+ if(shortenTip)lengths[lengths.length-1]=Math.min(lengths.at(-1),lengths.at(-2)*.80);
+ const scale=(fractions.at(-1)-fractions[0])/lengths.reduce((a,b)=>a+b,0),result=[fractions[0]];
+ for(const length of lengths)result.push(result.at(-1)+length*scale);result[result.length-1]=fractions.at(-1);return result;
+}
+export function soybeanBranches(s){const h=cropDimensions(s).h;
+ return Array.from({length:3},(_,i)=>{const q=organVariation(s,'branch',i),angle=i*2.39996+.8+q.angle,startY=h*(.17+q.pitch*.10),height=h*Math.max(.43,Math.min(.73,(.56+i*.035)*q.length)),spread=.13*q.width;
+  return {angle,start:[.014*startY/h,startY,0],end:[Math.cos(angle)*spread,height,Math.sin(angle)*spread],radius:.0024*q.depth,axis:i+1,nodeSeed:i*113+59};});
+}
+export function cerealSpike(s){const q=organVariation(s,'spike'),barley=s.crop==='barley',count=barley?22:19;
+ return {length:(barley?.095:.105)*q.length,width:q.width,nodes:axisNodeFractions(s,Array.from({length:count},(_,i)=>i/(count-1)),'spike')};
+}
+export function sunflowerRays(f){
+ const s={plantSeed:f.seed,variation:f.variation},nominal=Array.from({length:f.rayCount+1},(_,i)=>i/f.rayCount),nodes=axisNodeFractions({...s,variation:(f.variation??.24)*.30},nominal,'ray-circle');
+ return Array.from({length:f.rayCount},(_,i)=>{const q=organVariation(s,'ray',i),r=seeded(q.seed+91);
+  return {angle:nodes[i]*Math.PI*2,length:f.rayLength*q.length*(1-f.wilt*.65),width:Math.max(q.width,.90,Math.max(nodes[i+1]-nodes[i],i?nodes[i]-nodes[i-1]:nodes.at(-1)-nodes.at(-2))*f.rayCount*.94),curl:q.curl,roll:q.twist,retained:r()>=f.wilt*.88};});
+}
+export function maizeKernel(s,row,index,ear=maizeEar(s)){
+ const q=organVariation(s,'kernel',index,row),a=Math.min(1,q.strength);
+ return {t:(index+.65+q.pitch*a)/(ear.kernels+1.3),angle:row/ear.rows*Math.PI*2+q.angle*.12,
+  length:1+(q.length-1)*.35,width:1+(q.width-1)*.30,depth:1+(q.depth-1)*.25,shade:q.shade};
+}
+
+export function soybeanStudyNode(s,rank=2){
+ const h=cropDimensions(s).h,n=s.season==='summer'?7:3,seed=s.plantSeed??s.seed??1847,nodeSeed=Math.floor(seeded(seed)()*100000),i=Math.min(rank,n-1),node=soybeanAxisNodes(s,h,n,nodeSeed)[i];
+ return {...node,position:[.014*node.t,h*node.t,0],angle:i*2.39996};
 }
