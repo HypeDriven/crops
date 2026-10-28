@@ -65,6 +65,12 @@ Sunflower heads use a curved receptacle with a closed back, a stage-dependent or
 
 Maize has an axillary ear on a shank, a closed tapered wrapping husk, visible silk and a smaller secondary ear shoot. The labelled cutaway removes a frontal husk sector to expose 14 paired kernel rows with 32 kernels per row; intact husks are checked to enclose the kernels.
 
+Soybean close-ups use a continuous, gently compressed pod wall with dorsal and ventral sutures, a short pedicel and a tapered style remnant. The enclosed seeds are smooth and visible only in cutaway. Fine, short, tapered trichomes are attached to pod, stem, petiole and leaflet surfaces. Leaflets have entire margins, rounded bases, subtly asymmetric lateral blades, a longer terminal rachis, and subdued pinnate/reticulate venation. Pubescence density is a representative sample for rendering, not a measured cultivar trait.
+
+Sunflower disks use tightly packed golden-angle units with receptacular paleae, closed central buds, five-lobed corollas, anther tubes and bifid styles at anthesis, spent outer florets, and compressed achenes at seed maturity. The ligules overlap at their broadest point; their width follows the head circumference and ray count. Head pitch, roll, size, floral detail and organ proportions vary with seed and developmental stage.
+
+Across all five crops, bounded normal variates control modest plant lean and developmental spread; a shared vigour term correlates height and breadth. These size/age distributions are explicit visual modelling assumptions, not fitted agronomic data. Mature sunflower azimuth is centred on a common easterly bearing. At the default variation, its spread uses the approximately 42.8° pooled SD reported by Takács et al. (2022) for 2,800 heads in 14 plantations; that sample is not a universal cultivar distribution. The variation control narrows or widens the population. Ripening heads progressively droop. The scene is a fixed-time study, not a simulation of diurnal heliotropism.
+
 Additional regression checks verify positional ageing, reproductive shoot termination, convergent blade tips, watertight culm ends, and husk containment. Software projections of the actual 3D meshes were inspected alongside the interactive portable views. Native WebGL rendering remains unverified in the preview environment.
 
 ## Botanical scope
@@ -91,6 +97,11 @@ References are also available in the application's information dialog:
 - [UMN: Soybean leaf development](https://extension.umn.edu/agriculture/crop-production/soybean/soybean-growth-stages)
 - [Cornell: Sunflower leaf arrangement](https://cals.cornell.edu/weed-science/weed-profiles/common-sunflower)
 - [Mississippi State: Soybean stages](https://extension.msstate.edu/publications/guide-soybean-growth-stages)
+- [Flora of China: Glycine max morphology](https://www.efloras.org/florataxon.aspx?flora_id=2&taxon_id=242323602)
+- [CFIA: Soybean biology and trichomes](https://inspection.canada.ca/en/plant-varieties/plants-novel-traits/applicants/directive-94-08/biology-documents/glycine-max-merr)
+- [Burke Herbarium / Flora of North America: Sunflower morphology](https://burkeherbarium.org/imagecollection/taxon.php?Taxon=Helianthus+annuus)
+- [Atamian et al. 2016: Sunflower heliotropism](https://doi.org/10.1126/science.aaf9793)
+- [Takács et al. 2022: Measured sunflower head orientation](https://doi.org/10.3389/fpls.2022.842560)
 - [Penn State: Soybean nodulation](https://extension.psu.edu/evaluating-nodulation-in-soybeans)
 
 ## License

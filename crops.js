@@ -31,9 +31,9 @@ export function inspection(s,part){const d=cropDimensions(s),h=d.h,c=s.crop||'wh
   if(c==='barley'){target=[.012,h+.075,0];span=.39;title='Two rows. Long awns.';desc='One fertile central spikelet per triplet forms two grain rows. The lateral spikelets remain sterile in this two-row form.';}
   if(c==='maize'){target=[.09,h*.57+.10,.11];span=.46;title='A silk-bearing ear.';desc=s.cutaway?'The husk is peeled back to expose paired rows of kernels on the cob. The kernel arrangement is a representative 14-row ear.':'The female ear sits in a leaf axil. Husk leaves enclose the cob; silks emerge from its tip. Enable the cutaway to inspect kernels.';}
   if(c==='sunflower'){target=sunflowerHead(s).center;span=.40;title=s.maturity>.78?'From florets to achenes.':'A composite flower head.';desc='Yellow rays are individual florets. Hundreds of disk florets occupy a spiral pattern above overlapping green involucral bracts.';}
-  if(c==='soybean'){target=[.055,h*.54,.025];span=.27;title=s.maturity<.3?'Flowers at the leaf axils.':'Pods at the leaf axils.';desc=s.cutaway?'Opened pods reveal representative two- or three-seeded fruits. Nodules are modelled on the root system.':'Small papilionaceous flowers give way to hairy pods, with seed bulges and a longitudinal seam.';}
+  if(c==='soybean'){target=[.016,h*.54-.024,.010];span=s.maturity<.3?.13:.15;title=s.maturity<.3?'Flowers at the leaf axils.':'Pods at the leaf axils.';desc=s.cutaway?'Opened pods reveal representative two- or three-seeded fruits. Nodules are modelled on the root system.':'Pendulous, gently curved pods have a continuous wall around two or three seeds, paired sutures, tapered tips and fine surface hairs. The seeds themselves are smooth.';}
  }else if(part==='tip'){const term=shootTermination(s);target=[s.crop==='soybean'?.014:0,h*(d.reproductive?1:.90),0];span=s.crop==='maize'?.50:profile(s).cereal?.26:.24;title=term==='tassel'?'A terminal male tassel.':term==='capitulum'?'The shoot ends in a head.':term==='terminal-spike'?'A terminal cereal spike.':term==='cut-stubble'?'A harvested stem.':term==='arrested-bud'?'The uppermost trifoliate.':'The youngest leaves.';desc=term==='arrested-bud'?'Stem extension has stopped. The final trifoliate remains immediately below a compact terminal bud; its leaflets are expanded rather than continually unfolding.':d.reproductive&&!['young-trifoliate','arrested-bud'].includes(term)?'The vegetative shoot has become a terminal inflorescence. New foliage is not added above the flowers.':'Young leaves near the apex are smaller, paler, less expanded and more folded than older leaves below them.';}else if(part==='flower'){target=[0,h+.12,0];span=.5;title='The male inflorescence.';desc='The terminal tassel branches into spikelet-bearing axes. Anthers are present near the silking stage; pollen grains are not individually simulated.';}
- else if(part==='leaf'){const fraction=c==='maize'?.64:c==='sunflower'?.57:c==='soybean'?.58:.71;target=[p.cereal?.05:.07,h*fraction+.025,0];span=c==='maize'?.58:c==='sunflower'?.38:c==='soybean'?.28:.29;title=c==='soybean'?'One leaf, three leaflets.':c==='sunflower'?'Veins, teeth, and hairs.':'A blade, in detail.';desc=c==='soybean'?'A terminal leaflet and two lateral leaflets share a petiole. Reticulate veins and fine pubescence distinguish them from grass blades.':c==='sunflower'?'A petiole supports a broad, serrate, cordate blade with branching veins. Lower leaves are opposite; later leaves are alternate.':c==='maize'?'A broad parallel-veined blade joins a clasping sheath at the collar. Maize lacks the clasping auricles seen in barley.':c==='barley'?'Broad, smooth auricles clasp the culm. Longitudinal veins and a membranous ligule mark the blade–sheath junction.':'Parallel veins, a folded midrib, a membranous ligule, and paired hairy auricles.';}
+ else if(part==='leaf'){const fraction=c==='maize'?.64:c==='sunflower'?.57:c==='soybean'?.58:.71;target=[p.cereal?.05:.07,h*fraction+.025,0];span=c==='maize'?.58:c==='sunflower'?.38:c==='soybean'?.23:.29;title=c==='soybean'?'One leaf, three leaflets.':c==='sunflower'?'Veins, teeth, and hairs.':'A blade, in detail.';desc=c==='soybean'?'A larger terminal leaflet and two smaller, oblique lateral leaflets have rounded bases, entire margins and short petiolules. Fine hairs cover the matte surfaces, petiole and stem.':c==='sunflower'?'A petiole supports a broad, serrate, cordate blade with branching veins. Lower leaves are opposite; later leaves are alternate.':c==='maize'?'A broad parallel-veined blade joins a clasping sheath at the collar. Maize lacks the clasping auricles seen in barley.':c==='barley'?'Broad, smooth auricles clasp the culm. Longitudinal veins and a membranous ligule mark the blade–sheath junction.':'Parallel veins, a folded midrib, a membranous ligule, and paired hairy auricles.';}
  else if(part==='root'){target=[0,-.17,0];span=.72;title=c==='soybean'?'A nodulated taproot.':c==='sunflower'?'A branching taproot.':c==='maize'?'Crown roots and braces.':'An underground network.';desc=c==='soybean'?'Lateral roots branch from the taproot. Visible nodules represent symbiotic structures; their number is illustrative.':c==='sunflower'?'A dominant taproot gives rise to laterals and fine branches. Only the upper 45 cm are shown.':c==='maize'?'Nodal roots form a fibrous system. Above-ground brace roots descend from basal stalk nodes toward the soil.':'Seminal and crown roots branch into fine laterals. Only the upper 45 cm are shown.';}
  if(d.residue&&part==='root'){title='Root remnants after harvest.';desc='The upper root system is retained as dead residue. Fine-root persistence is illustrative; only the upper 45 cm are shown.';}if(d.residue&&part!=='root'){title='The remaining stubble.';desc='A harvested spring annual retains dead stems and root remnants; living leaves, flowers, and fruits are absent.';}
  return{target,span,title,desc};}
@@ -59,9 +59,12 @@ export function leafDevelopment(s,rank,count,seed=0){
  const base=cropColors(s),leaf=mixHex(base.leaf,'#b4b96c',emerging?.20:0),color=mixHex(leaf,'#a28d4a',senescence*.72);
  return{rank,relativeAge:age,expansion,size,widthFactor:Math.sqrt(expansion)*envelope,fold:emerging?1-expansion:0,droop:.16+age*.35+senescence*.22,color,senescence,emerging};
 }
-export function sunflowerHead(s){const m=s.maturity,h=cropDimensions(s).h,bud=m<.12,post=m>.76;
- const tilt=bud?.5:post?-.25-(m-.76)/.24*.85:.16-(m-.12)*.34;
- return{center:[.012*Math.sin(h*2),h-(post?(m-.76)*.18:0),.055+(post?(m-.76)*.18:0)],tilt,radius:bud?.028+m*.24:.088+m*.035,rayLength:.040+Math.min(m,.6)*.026,rayCount:34,bud,post,flowerFront:Math.sqrt(Math.max(0,1-Math.max(0,m-.12)/.64)),wilt:Math.max(0,(m-.72)/.28)};
+export function sunflowerHead(s){const seed=s.plantSeed??s.seed??1847,r=seeded(seed+3841),v=Math.min(1.6,(s.variation??.24)/.24),m=s.maturity,h=cropDimensions(s).h,bud=m<.12,post=m>.76;
+ const size=Math.exp(boundedNormal(r)*.045*v),tilt=Math.max(-1.45,Math.min(.8,(bud?.62:.28-(m-.12)*1.12)-Math.max(0,m-.72)*2.3+boundedNormal(r)*.11*v));
+ const yaw=s.headYaw??boundedNormal(r)*.12*v,roll=boundedNormal(r)*.045*v,radius=(bud?.028+m*.24:.088+m*.035)*size;
+ const rayCount=Math.max(32,Math.min(46,Math.round(38+boundedNormal(r)*2.4))),rayLength=(.040+Math.min(m,.6)*.012)*size;
+ return{seed,center:[.012*Math.sin(h*2)+Math.sin(yaw)*.055,h-Math.max(0,m-.70)*.20,.055+Math.max(0,m-.70)*.16],tilt,yaw,roll,radius,rayLength,rayCount,rayWidth:Math.PI*2*(radius+rayLength*.5)/rayCount*1.20,
+  diskCount:Math.round((1600+boundedNormal(r)*120)*size*size),bud,post,flowerFront:Math.sqrt(Math.max(0,1-Math.max(0,m-.12)/.64)),wilt:Math.max(0,(m-.72)/.28)};
 }
 export function maizeEar(s,secondary=false){const h=cropDimensions(s).h,f=secondary?.45:1;return{base:[secondary?-.048:.055,h*(secondary?.44:.57),secondary?.025:.065],direction:[secondary?-.28:.32,.87,.39],length:(.17+s.maturity*.075)*f,radius:(.026+s.maturity*.013)*f,rows:14,kernels:32,scale:f};}
 export function shootTermination(s){const d=cropDimensions(s);if(d.residue)return 'cut-stubble';if(d.reproductive)return s.crop==='soybean'&&s.maturity<.62?'young-trifoliate':s.crop==='sunflower'?'capitulum':s.crop==='maize'?'tassel':s.crop==='soybean'?'arrested-bud':'terminal-spike';return profile(s).cereal||s.crop==='maize'?'leaf-whorl':s.crop==='soybean'?'young-trifoliate':'young-simple-leaves';}
@@ -76,5 +79,41 @@ export function soybeanAxisNodes(s,length,count,seed=0){
   const dev=leafDevelopment(s,rank,count,seed),uppermost=rank===count-1;
   if(uppermost&&!dev.emerging)dev.size*=.72;
   return {t,uppermost,dev:{...dev,petioleFactor:uppermost?.36:.65,elevation:uppermost&&dev.emerging?.8:0}};
+ });
+}
+
+// Shape coordinates are in metres; shared by mesh and portable renderers.
+export function soybeanLeafSurface(t,v,L,W,dev={}){
+ const shape=t<=0||t>=1?0:Math.pow(Math.sin(Math.PI*Math.pow(t,.78)),.82);
+ const asym=dev.oblique||0,side=v*W*.5*shape*(1+asym*v*(1-t));
+ const fold=dev.fold||0,arch=L*(.085*Math.sin(Math.PI*t)-(.05+(dev.relativeAge||0)*.07)*t*t);
+ return [L*t,arch+Math.abs(v)*W*shape*(.035+fold*.48)+L*t*Math.sin(dev.elevation||0),side*(1-fold*.60)];
+}
+export function soybeanPodShape(s,seeds=3,seed=0){
+ const r=seeded(seed),fill=Math.max(.08,Math.min(1,(s.maturity-.27)/.35));
+ const length=(seeds===2?.041:.054)*( .96+r()*.08),width=.0105+fill*.002,depth=.003+fill*.005;
+ return {seeds,length,width,depth,fill,centers:Array.from({length:seeds},(_,i)=>(i+.65)/(seeds+.3))};
+}
+export function soybeanPodSurface(t,a,p){
+ const envelope=t<=0||t>=1?0:Math.pow(Math.sin(Math.PI*t),.40);
+ const bulge=.94+.06*Math.cos((t*p.seeds-.55)*Math.PI*2);
+ return [Math.cos(a)*p.width*.5*envelope*bulge,p.length*t,Math.sin(a)*p.depth*.5*envelope*bulge+p.length*.065*Math.sin(Math.PI*t)];
+}
+// Normal variates are bounded at 2.5 SD to avoid malformed outliers. Size,
+// breadth and extension share a vigour term; ranks and season remain coherent.
+export function boundedNormal(r){let u=Math.max(1e-9,r()),v=r();return Math.max(-2.5,Math.min(2.5,Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)));}
+export function fieldPlantTraits(s,seed){
+ const r=seeded(seed+9271),a=Math.max(0,Math.min(1,s.variation??.24)),vigour=boundedNormal(r),n=boundedNormal(r);
+ return {height:Math.exp(vigour*a*.18),breadth:Math.exp((vigour*.65+n*.35)*a*.17),lean:boundedNormal(r)*a*.075,
+  stage:Math.max(0,Math.min(1,s.maturity+boundedNormal(r)*a*.055)),
+  // Takacs et al. 2022: pooled sunflower azimuth SD 42.8 degrees (14 stands).
+  // Default variation uses that spread; the control can narrow or widen it.
+  azimuth:s.crop==='sunflower'?boundedNormal(r)*(42.8*Math.PI/180)*Math.min(1.6,a/.24):r()*Math.PI*2};
+}
+export function sunflowerDiskLayout(f,detail=true){
+ const count=detail?f.diskCount:180,r=seeded(f.seed+902),cell=f.radius/Math.sqrt(count);
+ return Array.from({length:count},(_,k)=>{const a=k*2.399963229728653,R=f.radius*Math.sqrt((k+.5)/count)*.993;
+  const x=Math.cos(a)*R+(r()-.5)*cell*.07,y=Math.sin(a)*R+(r()-.5)*cell*.07,fraction=R/f.radius;
+  return {x,y,fraction,angle:a,size:cell*(.94+r()*.09),phase:f.post?'seed':fraction<f.flowerFront-.055?'bud':fraction>f.flowerFront+.055?'spent':'flower'};
  });
 }

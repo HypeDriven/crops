@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import { createHash } from 'node:crypto';
 import { createPlantGeometry, createRootGeometry, Build } from '../crop-model.js';
-import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar, soybeanAxisNodes, seeded } from '../crops.js';
+import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar, soybeanAxisNodes, seeded, soybeanPodShape, soybeanPodSurface, sunflowerHead, sunflowerDiskLayout, fieldPlantTraits } from '../crops.js';
 import { drawCrop, drawTaproots } from '../crop-canvas.js';
 let cases=0;
 function verify(g,label){const count=g.getAttribute('position').count;assert(count>0,label);for(const name of ['position','normal','color','uv','organ']){const a=g.getAttribute(name);assert(a,label+': '+name);assert(Array.from(a.array).every(Number.isFinite),label+': finite '+name);}assert(Array.from(g.index.array).every(i=>i>=0&&i<count),label+': indices');assert(Number.isFinite(g.boundingSphere.radius)&&g.boundingSphere.radius>0,label+': bounds');}
@@ -66,3 +66,17 @@ for(const season of ['spring','summer'])for(const maturity of [.26,.5,.619,.62,.
  g.dispose();
 }
 console.log('Passed soybean main and branch apex attachments across growth arrest, both detail levels, and varied seeds.');
+
+// Continuous, gently compressed soybean valves and fine, short surface hairs.
+for(const seeds of [2,3]){const shape=soybeanPodShape({maturity:.65},seeds,21);assert(shape.length>.039&&shape.length<.060);assert(shape.width>=.008&&shape.width<=.015);assert(shape.depth<shape.width);assert.equal(soybeanPodSurface(0,0,shape)[0],0);assert.equal(soybeanPodSurface(1,0,shape)[0],0);
+ for(let k=1;k<seeds;k++){const between=(shape.centers[k-1]+shape.centers[k])/2;assert(soybeanPodSurface(between,0,shape)[0]>shape.width*.36,'Continuous pod wall does not pinch into disconnected beads');}}
+const fuzzy=createPlantGeometry({crop:'soybean',season:'summer',maturity:.65,seed:1847},1847,true),hairPoints=[];
+for(let i=0;i<fuzzy.attributes.organ.count;i++)if(fuzzy.attributes.organ.array[i]===3)hairPoints.push(new THREE.Vector3().fromBufferAttribute(fuzzy.attributes.position,i));
+assert(hairPoints.length>30000,'Pubescence is present on close-up organs');assert.equal(hairPoints.length%10,0);
+for(let i=0;i<hairPoints.length;i+=10){const base=hairPoints[i].clone().add(hairPoints[i+1]).multiplyScalar(.5),tip=hairPoints[i+4],length=tip.distanceTo(base);assert(length>.00024&&length<.00125,'Trichomes remain submillimetre scale');assert(hairPoints[i].distanceTo(hairPoints[i+1])<.000045,'Hairs are fine rather than thick spikes');}fuzzy.dispose();
+// Sunflower packing, dense ligules, and maturity-dependent head posture.
+for(const maturity of [.2,.4,.65,.88])for(const seed of [1,1847,999]){const s={crop:'sunflower',season:'summer',maturity,seed,variation:.24},f=sunflowerHead(s),units=sunflowerDiskLayout(f,true);assert(units.length>1000&&units.length<2300);assert(f.rayCount>=32&&f.rayCount<=46);assert(f.rayWidth>Math.PI*2*(f.radius+f.rayLength*.5)/f.rayCount,'Ligules overlap at maximum breadth');assert(units.every(u=>Math.hypot(u.x,u.y)<f.radius&&u.size>0));assert.deepEqual(units,sunflowerDiskLayout(f,true));if(maturity>.8)assert(units.every(u=>u.phase==='seed'));}
+const early=sunflowerHead({crop:'sunflower',season:'summer',maturity:.2,seed:1847}),late=sunflowerHead({crop:'sunflower',season:'summer',maturity:.9,seed:1847});assert(late.tilt<early.tilt-.7,'Ripening heads droop');
+const azimuths=Array.from({length:8000},(_,seed)=>fieldPlantTraits({crop:'sunflower',maturity:.65,variation:.24},seed).azimuth),mean=azimuths.reduce((a,b)=>a+b,0)/azimuths.length,sd=Math.sqrt(azimuths.reduce((a,b)=>a+(b-mean)**2,0)/azimuths.length);assert(Math.abs(mean)<.04&&sd>.69&&sd<.79,'Easterly population has the published approximate azimuth spread');
+for(const crop of Object.keys(CROPS)){const s={crop,maturity:.65,variation:.24};for(let seed=0;seed<200;seed++){const t=fieldPlantTraits(s,seed);assert(t.height>.85&&t.height<1.16&&t.breadth>.85&&t.breadth<1.16);assert(Math.abs(t.stage-s.maturity)<.034);assert.deepEqual(t,fieldPlantTraits(s,seed));}const z=fieldPlantTraits({...s,variation:0},8);assert.equal(z.height,1);assert.equal(z.breadth,1);assert.equal(z.stage,s.maturity);}
+console.log('Passed continuous soybean pod walls, fine pubescence, sunflower floret packing, ray overlap, head droop, and seeded population distribution checks.');

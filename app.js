@@ -5,7 +5,7 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 import * as THREE from './vendor/three.module.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { profile, cropDimensions, inspection, anatomyLabels, syncCropUI, configureDensity, densityName } from './crops.js';
+import { profile, cropDimensions, inspection, anatomyLabels, syncCropUI, configureDensity, densityName, fieldPlantTraits } from './crops.js';
 import { createPlantGeometry, createRootGeometry } from './crop-model.js';
 
 const $=id=>document.getElementById(id);
@@ -19,7 +19,7 @@ const seasons={
 };
 let renderer,scene,camera,controls,field,specimen,ground,soilBlock,rootGroup,sun,sky,plantMaterial,rootMaterial;
 let meshField=[],labels=[],lastTime=0,time=0,frames=0,fpsTime=0,lastBuild=0,changingCamera=null;
-const uniform={uFlex:{value:1},uTime:{value:0},uWind:{value:3.5},uDirection:{value:new THREE.Vector2(.707,.707)}};
+const uniform={uLeafFlutter:{value:1},uFlex:{value:1},uTime:{value:0},uWind:{value:3.5},uDirection:{value:new THREE.Vector2(.707,.707)}};
 function rng(seed){let a=seed|0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const col=c=>new THREE.Color(c);
@@ -27,10 +27,10 @@ const mix=(a,b,t)=>a.clone().lerp(b,t);
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('show'),2600);}
 function fail(e){console.error(e);$('loading').classList.add('hidden');$('error-message').textContent='This study needs WebGL 2. Try an up-to-date browser with hardware acceleration enabled. '+(e?.message||'');$('error').classList.remove('hidden');}
 function dimensions(){return cropDimensions(state);}
-function makeTiller(seed,detail=false){return createPlantGeometry(state,seed,detail);}
+function makeTiller(seed,detail=false){const traits=fieldPlantTraits(state,seed);return createPlantGeometry(detail?state:{...state,maturity:traits.stage},seed,detail);}
 function windMaterial(){const mat=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.82,metalness:0});mat.onBeforeCompile=shader=>{Object.assign(shader.uniforms,uniform);shader.vertexShader=shader.vertexShader.replace('#include <common>',`#include <common>
 attribute float organ; varying float vOrgan; varying vec2 vSurfaceUv; varying vec3 vPlantPos;
-uniform float uTime; uniform float uWind; uniform float uFlex; uniform vec2 uDirection;`);
+uniform float uLeafFlutter; uniform float uTime; uniform float uWind; uniform float uFlex; uniform vec2 uDirection;`);
 shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
 vOrgan=organ;vSurfaceUv=uv;vPlantPos=position;
 vec3 worldOrigin=vec3(0.0);
@@ -42,7 +42,7 @@ float wave=sin(uTime*1.4-phase)*.62+sin(uTime*.73-phase*.47)*.32+sin(uTime*2.5-p
 float bend=wave*uWind*.021*uFlex*h*h;
 transformed.xz+=uDirection*bend;
 transformed.y-=abs(bend)*h*.10;
-if((organ>0.5&&organ<1.5)||(organ>5.5&&organ<6.5)){float flutter=sin(uTime*7.5+phase*2.0+uv.y*9.0)*uWind*.0006*uv.y;transformed.y+=flutter;transformed.xz+=vec2(-uDirection.y,uDirection.x)*flutter;}`);
+if((organ>0.5&&organ<1.5)||(organ>5.5&&organ<6.5)){float flutter=sin(uTime*7.5+phase*2.0+uv.y*9.0)*uWind*.0006*uv.y*uLeafFlutter;transformed.y+=flutter;transformed.xz+=vec2(-uDirection.y,uDirection.x)*flutter;}`);
 shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
 varying float vOrgan; varying vec2 vSurfaceUv; varying vec3 vPlantPos;
 float hash21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}`);
@@ -57,11 +57,11 @@ if(vOrgan>.5&&vOrgan<2.5){diffuseColor.rgb+=vec3(.015,.022,.005)*(1.0-abs(dot(no
 function disposeGroup(group){for(let child of [...group.children]){group.remove(child);if(child.geometry)child.geometry.dispose();}}
 function makeRoots(){return createRootGeometry(state);}
 function buildSpecimen(){disposeGroup(specimen);disposeGroup(rootGroup);const count=profile(state).cereal?((state.season==='summer'||state.season==='spring')?5:3):1,r=rng(state.seed+45),dummy=new THREE.Object3D();for(let i=0;i<count;i++){const mesh=new THREE.Mesh(makeTiller(state.seed+i*79,true),plantMaterial);mesh.position.set(i?Math.cos(i*2.4)*.012:0,0,i?Math.sin(i*2.4)*.012:0);if(i){mesh.rotation.z=(r()-.5)*.13;mesh.rotation.y=r()*.4;mesh.scale.setScalar(.83+r()*.15);}mesh.userData.main=i===0;specimen.add(mesh);}rootGroup.add(new THREE.Mesh(makeRoots(),rootMaterial));specimen.visible=state.inspect;specimen.children.forEach(x=>x.visible=!state.isolate||x.userData.main);rootGroup.visible=state.inspect&&state.roots;makeLabels();}
-function buildField(){disposeGroup(field);meshField=[];const r=rng(state.seed),count=state.density,variants=5,per=Math.ceil(count/variants),dummy=new THREE.Object3D();for(let v=0;v<variants;v++){let amount=Math.min(per,count-v*per);if(amount<=0)continue;const mesh=new THREE.InstancedMesh(makeTiller(state.seed+v*103,false),plantMaterial,amount);for(let i=0;i<amount;i++){let x=(r()-.5)*7.8,z=(r()-.5)*13-3; // A lightly jittered drilled stand, with a narrow tramline.
+function buildField(){disposeGroup(field);meshField=[];const r=rng(state.seed),count=state.density,variants=12,per=Math.ceil(count/variants),dummy=new THREE.Object3D();for(let v=0;v<variants;v++){let amount=Math.min(per,count-v*per);if(amount<=0)continue;const mesh=new THREE.InstancedMesh(makeTiller(state.seed+v*103,false),plantMaterial,amount);for(let i=0;i<amount;i++){let x=(r()-.5)*7.8,z=(r()-.5)*13-3; // A lightly jittered drilled stand, with a narrow tramline.
 const spacing=profile(state).row,row=Math.round(x/spacing)*spacing;x=row+(r()-.5)*spacing*.35;
 if(Math.abs(x-1.65)<.13)x+=.24;
-let variation=1+(r()-.5)*state.variation;
-dummy.position.set(x,terrain(x,z),z);dummy.rotation.set(0,state.crop==='sunflower'?(r()-.5)*.4:r()*Math.PI*2,0);dummy.scale.set(variation,variation*(1+(r()-.5)*state.variation*.3),variation);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);const tint=new THREE.Color().setHSL(.11+(r()-.5)*.014,.2,.78+r()*.22);mesh.setColorAt(i,tint);}mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;field.add(mesh);meshField.push(mesh);}field.visible=!state.inspect;$('stem-count').textContent=`${count.toLocaleString()} ${profile(state).cereal?'procedural culms':'procedural plants'}`;$('density-value').textContent=densityName(state);}
+const traits=fieldPlantTraits(state,state.seed+v*9187+i*47);
+dummy.position.set(x,terrain(x,z),z);dummy.rotation.set(traits.lean,traits.azimuth,traits.lean*.45);dummy.scale.set(traits.breadth,traits.height,traits.breadth);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);const tint=new THREE.Color().setHSL(.11+(r()-.5)*.014,.2,.78+r()*.22);mesh.setColorAt(i,tint);}mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=false;field.add(mesh);meshField.push(mesh);}field.visible=!state.inspect;$('stem-count').textContent=`${count.toLocaleString()} ${profile(state).cereal?'procedural culms':'procedural plants'}`;$('density-value').textContent=densityName(state);}
 function terrain(x,z){return Math.sin(x*.8+z*.3)*.013+Math.sin(z*.9)*.009;}
 function makeGround(){const geom=new THREE.PlaneGeometry(160,160,140,140);geom.rotateX(-Math.PI/2);const positions=geom.attributes.position;for(let i=0;i<positions.count;i++){let x=positions.getX(i),z=positions.getZ(i);positions.setY(i,terrain(x,z)-.006);}geom.computeVertexNormals();const material=new THREE.MeshStandardMaterial({color:0x766244,roughness:1});material.onBeforeCompile=s=>{s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vSoil;');s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSoil=position;');s.fragmentShader=s.fragmentShader.replace('#include <common>',`#include <common>
 varying vec3 vSoil;float h2(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.54);}`);s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
@@ -70,7 +70,7 @@ float grain=h2(floor(vSoil.xz*520.0));float clod=h2(floor(vSoil.xz*32.0));float 
 soilBlock=new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.035,70),new THREE.MeshStandardMaterial({color:0x65503a,roughness:1,transparent:true,opacity:.48}));soilBlock.position.y=-.025;soilBlock.visible=false;scene.add(soilBlock);
 }
 function makeSky(){const g=new THREE.SphereGeometry(100,32,16);const m=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:col(0xaec6b8)},bottom:{value:col(0xe6dfba)},uSun:{value:V(-.5,.25,-.65).normalize()}},vertexShader:'varying vec3 vPos;void main(){vPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec3 vPos;uniform vec3 top;uniform vec3 bottom;uniform vec3 uSun;void main(){vec3 d=normalize(vPos);float h=smoothstep(0.,.8,d.y);vec3 color=mix(bottom,top,h);float sun=pow(max(dot(d,uSun),0.),100.);color+=vec3(.45,.31,.12)*sun;gl_FragColor=vec4(color,1.);}`});sky=new THREE.Mesh(g,m);scene.add(sky);}
-function updateSeason(rebuild=true){const s=seasons[state.season];$('season-kicker').textContent=state.inspect?'SPECIMEN STUDY / '+state.season.toUpperCase():s.kicker;$('season-title').textContent=state.inspect?'Closer to nature.':s.title;$('season-description').textContent=state.inspect?s.stage:s.desc;document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===state.season));scene.fog.color.setHex(s.fog);ground.material.color.setHex(s.soil);sky.material.uniforms.top.value.setHex(s.sky);sky.material.uniforms.bottom.value.setHex(s.fog).lerp(col('#eee8d0'),.25);sun.color.setHex(s.sun);sun.intensity=state.season==='winter'?2.3:3.4;scene.background=col(s.sky);$('maturity-value').textContent=Math.round(state.maturity*100)+'%';uniform.uFlex.value=profile(state).flex;syncCropUI(state);if(state.season!=='summer'&&['ear','flower'].includes(state.focus))state.focus='whole';if(rebuild){buildField();buildSpecimen();if(state.inspect)focus(state.focus,true);else resetCamera(false);}updateGround();}
+function updateSeason(rebuild=true){const s=seasons[state.season];$('season-kicker').textContent=state.inspect?'SPECIMEN STUDY / '+state.season.toUpperCase():s.kicker;$('season-title').textContent=state.inspect?'Closer to nature.':s.title;$('season-description').textContent=state.inspect?s.stage:s.desc;document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===state.season));scene.fog.color.setHex(s.fog);ground.material.color.setHex(s.soil);sky.material.uniforms.top.value.setHex(s.sky);sky.material.uniforms.bottom.value.setHex(s.fog).lerp(col('#eee8d0'),.25);sun.color.setHex(s.sun);sun.intensity=state.season==='winter'?2.3:3.4;scene.background=col(s.sky);$('maturity-value').textContent=Math.round(state.maturity*100)+'%';uniform.uFlex.value=profile(state).flex;uniform.uLeafFlutter.value=state.crop==='soybean'?0:1;syncCropUI(state);if(state.season!=='summer'&&['ear','flower'].includes(state.focus))state.focus='whole';if(rebuild){buildField();buildSpecimen();if(state.inspect)focus(state.focus,true);else resetCamera(false);}updateGround();}
 function updateGround(){ground.visible=!state.inspect||!state.roots;soilBlock.visible=state.inspect&&state.roots;rootGroup.visible=state.inspect&&state.roots;}
 function resetCamera(animate=true){if(state.inspect)return focus('whole',animate);let H=dimensions().h,target=V(0,Math.max(.25,H*.65),-1.35);let pos=mobile?V(1.7,Math.max(1.35,H*.7+1),3.4):V(2.15,Math.max(1.55,H*.7+1),3.6);moveCamera(pos,target,animate);controls.minDistance=.12;controls.maxDistance=23;controls.maxPolarAngle=Math.PI*.49;}
 function moveCamera(pos,target,animate=true){if(animate)changingCamera={start:performance.now(),pos:camera.position.clone(),target:controls.target.clone(),endPos:pos,endTarget:target};else{camera.position.copy(pos);controls.target.copy(target);controls.update();changingCamera=null;}}
