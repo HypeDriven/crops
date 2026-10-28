@@ -57,6 +57,16 @@ node scripts/check-crops.mjs
 
 The regression suite checks 160 crop, season, progression, and detail combinations; finite geometry and valid indices; deterministic generation; absence of living foliage or fruits on annual winter residue; root nodules; and maize and soybean cutaways. It also exercises the portable drawing routines without a GPU.
 
+## Developmental detail
+
+Leaf dimensions, expansion, folding, droop, colour and senescence follow node rank, the crop, and the selected growth stage. Middle leaves can be larger than both older basal leaves and emerging apical leaves; position is not treated as a simple global random scale. Vegetative grass apices carry an emerging rolled whorl, vegetative sunflower tips carry folded young leaves, and growing soybean axes end in young trifoliates. Mature cereal spikes, maize tassels and sunflower heads terminate their respective shoots, without fictitious new leaves above them.
+
+Sunflower heads use a curved receptacle with a closed back, a stage-dependent orientation, three imbricate rows of pointed bracts, five-lobed tubular disk florets, a centripetal flowering front, persistent wilting ray corollas, and elongated achenes at maturity. The cordate, serrate foliage has three basal primary veins and branching secondary veins.
+
+Maize has an axillary ear on a shank, a closed tapered wrapping husk, visible silk and a smaller secondary ear shoot. The labelled cutaway removes a frontal husk sector to expose 14 paired kernel rows with 32 kernels per row; intact husks are checked to enclose the kernels.
+
+Additional regression checks verify positional ageing, reproductive shoot termination, convergent blade tips, watertight culm ends, and husk containment. Software projections of the actual 3D meshes were inspected alongside the interactive portable views. Native WebGL rendering remains unverified in the preview environment.
+
 ## Botanical scope
 
 This is a botanically informed visual study of five representative crops. Wheat is an awned winter form of *Triticum aestivum*; barley is a long-awned, two-row winter form of *Hordeum vulgare*. Maize (*Zea mays*), sunflower (*Helianthus annuus*), and soybean (*Glycine max*) are represented as spring-sown annuals.
@@ -74,6 +84,11 @@ References are also available in the application's information dialog:
 - [Purdue: Maize tassels and pollen](https://www.agry.purdue.edu/Ext/corn/news/timeless/Tassels.html)
 - [University of Arizona: Corn growth and development](https://extension.arizona.edu/publication/corn-growth-and-development-stages)
 - [NDSU: Sunflower production](https://www.ndsu.edu/agriculture/extension/publications/sunflower-production-guide)
+- [Kew: Sunflower morphology](https://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:119003-2/general-information)
+- [Purdue: Maize ear development](https://agry.purdue.edu/Ext/corn/news/timeless/EarSize.html)
+- [Purdue: Silk development](https://agry.purdue.edu/Ext/corn/news/timeless/Silks.html)
+- [UMN: Corn leaf growth](https://extension.umn.edu/agriculture/crop-production/corn/growth-and-development)
+- [UMN: Soybean leaf development](https://extension.umn.edu/agriculture/crop-production/soybean/soybean-growth-stages)
 - [Cornell: Sunflower leaf arrangement](https://cals.cornell.edu/weed-science/weed-profiles/common-sunflower)
 - [Mississippi State: Soybean stages](https://extension.msstate.edu/publications/guide-soybean-growth-stages)
 - [Penn State: Soybean nodulation](https://extension.psu.edu/evaluating-nodulation-in-soybeans)

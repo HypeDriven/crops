@@ -2,9 +2,10 @@
 // PolyForm Noncommercial 1.0.0 with additional permission; see ../LICENSE.
 // Geometry and portable-renderer regression checks; no GPU or browser required.
 import assert from 'node:assert/strict';
+import * as THREE from '../vendor/three.module.js';
 import { createHash } from 'node:crypto';
-import { createPlantGeometry, createRootGeometry } from '../crop-model.js';
-import { CROPS, cropDimensions, inspection, anatomyLabels } from '../crops.js';
+import { createPlantGeometry, createRootGeometry, Build } from '../crop-model.js';
+import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar } from '../crops.js';
 import { drawCrop, drawTaproots } from '../crop-canvas.js';
 let cases=0;
 function verify(g,label){const count=g.getAttribute('position').count;assert(count>0,label);for(const name of ['position','normal','color','uv','organ']){const a=g.getAttribute(name);assert(a,label+': '+name);assert(Array.from(a.array).every(Number.isFinite),label+': finite '+name);}assert(Array.from(g.index.array).every(i=>i>=0&&i<count),label+': indices');assert(Number.isFinite(g.boundingSphere.radius)&&g.boundingSphere.radius>0,label+': bounds');}
@@ -17,7 +18,7 @@ for(const crop of Object.keys(CROPS))for(const season of ['spring','summer','aut
  const d=cropDimensions(state),organs=Array.from(g.getAttribute('organ').array);
  if(d.residue){assert(!organs.includes(1)&&!organs.includes(6),'No living foliage on harvested annuals');assert(!organs.includes(2)&&!organs.includes(7)&&!organs.includes(8)&&!organs.includes(9),'No reproductive organs on stubble');}
  if(season!=='summer')assert(!organs.includes(7)&&!organs.includes(8)&&!organs.includes(9),'No summer reproductive organs outside summer');
- for(const part of ['whole','ear','leaf','root','flower']){const view=inspection(state,part);assert(view.target.every(Number.isFinite)&&view.span>0);assert(anatomyLabels(state,part).every(a=>a.slice(1).every(Number.isFinite)));}
+ for(const part of ['whole','ear','leaf','root','flower','tip']){const view=inspection(state,part);assert(view.target.every(Number.isFinite)&&view.span>0);assert(anatomyLabels(state,part).every(a=>a.slice(1).every(Number.isFinite)));}
  if(detail){const roots=createRootGeometry(state);verify(roots,'roots '+crop+'/'+season);if(crop==='soybean'&&!d.residue)assert(Array.from(roots.attributes.organ.array).includes(10),'Soybean nodules');if(d.residue)assert(!Array.from(roots.attributes.organ.array).includes(10),'No live nodules in residue');roots.dispose();}
  if(crop!=='wheat')drawCrop(mock,state,0,600,400,1847,detail,5,.1);
  if(['sunflower','soybean'].includes(crop))drawTaproots(mock,state,100,100,400);
@@ -26,3 +27,22 @@ for(const crop of Object.keys(CROPS))for(const season of ['spring','summer','aut
 }
 for(const crop of ['maize','soybean']){const s={crop,season:'summer',maturity:.65,seed:1847,cutaway:true},g=createPlantGeometry(s,1847,true);verify(g,crop+' cutaway');assert(Array.from(g.attributes.organ.array).includes(8),'Cutaway exposes seeds');drawCrop(mock,s,0,500,600,1847,true);g.dispose();}
 console.log(`Passed ${cases} crop/season/progression/detail combinations, root and Canvas checks, seed determinism, and reproductive cutaways.`);
+
+// Young apices, positional leaf ageing, finite acute blade tips, and closed culms.
+for(const crop of Object.keys(CROPS)){
+ const s={crop,season:'spring',maturity:.65,seed:1847},old=leafDevelopment(s,0,8,1),middle=leafDevelopment(s,4,8,1),young=leafDevelopment(s,7,8,1);
+ assert(old.relativeAge>middle.relativeAge&&middle.relativeAge>young.relativeAge);
+ assert(young.expansion<middle.expansion&&young.size<middle.size&&young.fold>middle.fold,'Youngest leaves are smaller and folded');
+ assert(['leaf-whorl','young-simple-leaves','young-trifoliate'].includes(shootTermination(s)));
+ s.season='summer';s.maturity=.8;
+ assert(!shootTermination(s).startsWith('young'),'Reproductive apex does not grow fictitious terminal leaves');
+}
+const b=new Build();b.leaf(new THREE.Vector3(),.25,.02,0,.4,new THREE.Color('#638344'),true);
+const pg=b.geometry(),pp=pg.attributes.position;const last=new THREE.Vector3().fromBufferAttribute(pp,pp.count-1);
+for(let i=pp.count-9;i<pp.count;i++)assert(last.distanceTo(new THREE.Vector3().fromBufferAttribute(pp,i))<1e-9,'Blade tip converges to a single point');pg.dispose();
+const tube=new Build();tube.tube([new THREE.Vector3(),new THREE.Vector3(0,.1,0)],[.01,.005],new THREE.Color('#638344'),8);const tg=tube.geometry();
+const edgeCounts=new Map();for(let i=0;i<tg.index.count;i+=3){const ids=[0,1,2].map(k=>tg.index.array[i+k]);const coords=ids.map(id=>new THREE.Vector3().fromBufferAttribute(tg.attributes.position,id).toArray().map(x=>String(Math.round(x*1e6))).join(','));for(let k=0;k<3;k++){const key=[coords[k],coords[(k+1)%3]].sort().join('|');edgeCounts.set(key,(edgeCounts.get(key)||0)+1);}}
+assert([...edgeCounts.values()].every(n=>n===2),'Culm mesh has no open end or seam edges');tg.dispose();
+const cs={crop:'maize',season:'summer',maturity:.65,seed:1847,cutaway:false},ear=maizeEar(cs),corn=createPlantGeometry(cs,1847,true),base=new THREE.Vector3(...ear.base),axis=new THREE.Vector3(...ear.direction).normalize();
+for(let i=0;i<corn.attributes.position.count;i++)if(corn.attributes.organ.array[i]===8){let v=new THREE.Vector3().fromBufferAttribute(corn.attributes.position,i).sub(base),y=v.dot(axis);if(y<0||y>ear.length+.01)continue;const t=(y+.008)/(ear.length*1.09),radius=v.addScaledVector(axis,-y).length(),huskRadius=ear.radius*1.26*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.43)*(1-.24*t);assert(radius<huskRadius+.0001,'Closed husk encloses kernels');}corn.dispose();
+console.log('Passed positional leaf development, shoot termination, convergent tip, closed culm, and closed-husk containment checks.');

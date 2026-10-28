@@ -50,7 +50,7 @@ shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',
 float striation=0.0;
 if(vOrgan>0.5&&vOrgan<1.5){float veins=pow(.5+.5*cos(vSurfaceUv.x*100.53),12.0);float midrib=exp(-abs(vSurfaceUv.x-.5)*95.0);float cells=hash21(floor(vSurfaceUv*vec2(170.0,1100.0)));diffuseColor.rgb*=.88+veins*.13+midrib*.16+cells*.055;striation=veins;}
 else if(vOrgan>1.5&&vOrgan<2.5){float ribs=pow(.5+.5*cos(vSurfaceUv.x*75.4),7.0);float grain=hash21(floor(vSurfaceUv*vec2(140.0,270.0)));diffuseColor.rgb*=.88+ribs*.19+grain*.06;striation=ribs;}
-else if(vOrgan>5.5&&vOrgan<6.5){float midrib=exp(-abs(vSurfaceUv.x-.5)*70.0);float branches=pow(.5+.5*cos((vSurfaceUv.y-abs(vSurfaceUv.x-.5)*.75)*65.0),16.0);float wax=hash21(floor(vSurfaceUv*vec2(300.0,550.0)));diffuseColor.rgb*=.9+midrib*.13+branches*.08+wax*.045;}else if(vOrgan>7.5&&vOrgan<8.5){diffuseColor.rgb*=.90+.10*sin(vSurfaceUv.x*35.0)*sin(vSurfaceUv.y*31.0);}else{diffuseColor.rgb*=.94+.06*cos(vSurfaceUv.x*94.24);}
+else if(vOrgan>5.5&&vOrgan<6.5){float midrib=exp(-abs(vSurfaceUv.x-.5)*70.0);float branches=pow(.5+.5*cos((vSurfaceUv.y-abs(vSurfaceUv.x-.5)*.75)*65.0),16.0);float wax=hash21(floor(vSurfaceUv*vec2(300.0,550.0)));diffuseColor.rgb*=.9+midrib*.13+branches*.08+wax*.045;}else if(vOrgan>8.5&&vOrgan<9.5){diffuseColor.rgb*=.97+.03*cos(vSurfaceUv.x*18.85);}else if(vOrgan>7.5&&vOrgan<8.5){diffuseColor.rgb*=.90+.10*sin(vSurfaceUv.x*35.0)*sin(vSurfaceUv.y*31.0);}else{diffuseColor.rgb*=.94+.06*cos(vSurfaceUv.x*94.24);}
 // Gentle transmitted light in thin leaf blades and bracts.
 if(vOrgan>.5&&vOrgan<2.5){diffuseColor.rgb+=vec3(.015,.022,.005)*(1.0-abs(dot(normalize(vNormal),vec3(.4,.7,.5))));}`);
 };return mat;}
