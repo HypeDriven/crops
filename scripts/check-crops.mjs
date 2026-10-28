@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import { createHash } from 'node:crypto';
 import { createPlantGeometry, createRootGeometry, Build } from '../crop-model.js';
-import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar } from '../crops.js';
+import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar, soybeanAxisNodes, seeded } from '../crops.js';
 import { drawCrop, drawTaproots } from '../crop-canvas.js';
 let cases=0;
 function verify(g,label){const count=g.getAttribute('position').count;assert(count>0,label);for(const name of ['position','normal','color','uv','organ']){const a=g.getAttribute(name);assert(a,label+': '+name);assert(Array.from(a.array).every(Number.isFinite),label+': finite '+name);}assert(Array.from(g.index.array).every(i=>i>=0&&i<count),label+': indices');assert(Number.isFinite(g.boundingSphere.radius)&&g.boundingSphere.radius>0,label+': bounds');}
@@ -46,3 +46,23 @@ assert([...edgeCounts.values()].every(n=>n===2),'Culm mesh has no open end or se
 const cs={crop:'maize',season:'summer',maturity:.65,seed:1847,cutaway:false},ear=maizeEar(cs),corn=createPlantGeometry(cs,1847,true),base=new THREE.Vector3(...ear.base),axis=new THREE.Vector3(...ear.direction).normalize();
 for(let i=0;i<corn.attributes.position.count;i++)if(corn.attributes.organ.array[i]===8){let v=new THREE.Vector3().fromBufferAttribute(corn.attributes.position,i).sub(base),y=v.dot(axis);if(y<0||y>ear.length+.01)continue;const t=(y+.008)/(ear.length*1.09),radius=v.addScaledVector(axis,-y).length(),huskRadius=ear.radius*1.26*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.43)*(1-.24*t);assert(radius<huskRadius+.0001,'Closed husk encloses kernels');}corn.dispose();
 console.log('Passed positional leaf development, shoot termination, convergent tip, closed culm, and closed-husk containment checks.');
+
+// Every green main/branch apex retains an attached final leaf across the
+// growing-to-arrested boundary. Check mesh vertices, not just layout metadata.
+for(const season of ['spring','summer'])for(const maturity of [.26,.5,.619,.62,.65,.85,1])for(const seed of [1,1847,9923])for(const detail of [false,true]){
+ const s={crop:'soybean',season,maturity,seed},h=cropDimensions(s).h,g=createPlantGeometry(s,seed,detail),p=g.attributes.position,o=g.attributes.organ;
+ const axes=[{start:new THREE.Vector3(),end:new THREE.Vector3(.014,h,0),count:season==='summer'?7:3,main:true}];
+ if(season==='summer')for(let branch=0;branch<3;branch++){const a=branch*2.39996+.8;axes.push({start:new THREE.Vector3(.0024,h*.17,0),end:new THREE.Vector3(Math.cos(a)*.13,h*(.56+branch*.035),Math.sin(a)*.13),count:4,seed:branch*113+59});}
+ // Main axis uses the first seeded random number for developmental variation.
+ const random=seeded(seed);
+ for(const axis of axes){const length=axis.main?h:axis.start.distanceTo(axis.end),nodes=soybeanAxisNodes(s,length,axis.count,axis.main?Math.floor(random()*100000):axis.seed),last=nodes.at(-1),at=axis.start.clone().lerp(axis.end,last.t);
+  assert(length*(1-last.t)<=.00221,'Final leaf attaches within 2.2 mm of the bud');
+  assert(nodes.at(-1).t-nodes.at(-2).t<nodes[1].t-nodes[0].t,'Upper internodes shorten');
+  let attachment=Infinity,leaf=Infinity;
+  for(let i=0;i<p.count;i++){const q=new THREE.Vector3().fromBufferAttribute(p,i);if(o.array[i]===0)attachment=Math.min(attachment,q.distanceTo(at));if(o.array[i]===6)leaf=Math.min(leaf,q.distanceTo(axis.end));}
+  assert(attachment<.00001,`Final petiole actually joins axis: ${season}/${maturity}/${seed}/${axis.main?'main':'branch'}`);
+  assert(leaf<.030,'Leaflets remain beside every green shoot tip');
+ }
+ g.dispose();
+}
+console.log('Passed soybean main and branch apex attachments across growth arrest, both detail levels, and varied seeds.');
