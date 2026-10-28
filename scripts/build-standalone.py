@@ -17,7 +17,10 @@ sources = {
     key: base64.b64encode((ROOT / path).read_bytes()).decode('ascii')
     for key, path in {
         'three': 'vendor/three.module.js',
+        'data': 'crops.js',
         'orbit': 'vendor/OrbitControls.js',
+        'model': 'crop-model.js',
+        'canvas': 'crop-canvas.js',
         'fallback': 'fallback.js',
         'app': 'app.js',
     }.items()
@@ -28,9 +31,12 @@ const data=PAYLOAD;
 const decode=x=>new TextDecoder().decode(Uint8Array.from(atob(x),c=>c.charCodeAt(0)));
 const moduleURL=x=>URL.createObjectURL(new Blob([x],{type:'text/javascript'}));
 const three=moduleURL(decode(data.three));
+const cropdata=moduleURL(decode(data.data));
 const orbit=moduleURL(decode(data.orbit).replace("'./three.module.js'",JSON.stringify(three)));
-const fallback=moduleURL(decode(data.fallback));
-const app=decode(data.app).replace("'./vendor/three.module.js'",JSON.stringify(three)).replace("'./vendor/OrbitControls.js'",JSON.stringify(orbit)).replace('"./fallback.js"',JSON.stringify(fallback));
+const model=moduleURL(decode(data.model).replace("'./vendor/three.module.js'",JSON.stringify(three)).replace("'./crops.js'",JSON.stringify(cropdata)));
+const canvas=moduleURL(decode(data.canvas).replace("'./crops.js'",JSON.stringify(cropdata)));
+const fallback=moduleURL(decode(data.fallback).replace("'./crops.js'",JSON.stringify(cropdata)).replace("'./crop-canvas.js'",JSON.stringify(canvas)));
+const app=decode(data.app).replace("'./vendor/three.module.js'",JSON.stringify(three)).replace("'./vendor/OrbitControls.js'",JSON.stringify(orbit)).replace("'./crops.js'",JSON.stringify(cropdata)).replace("'./crop-model.js'",JSON.stringify(model)).replace('"./fallback.js"',JSON.stringify(fallback));
 await import(moduleURL(app));
 })().catch(e=>{document.getElementById('loading').innerHTML='<h2>Open this file in Chrome, Edge, Firefox or Safari</h2><p>The previewer may not support interactive HTML. Download the file and open it in your browser.</p>';console.error(e);});
 </script>'''

@@ -1,6 +1,6 @@
 # StarHermit Crops
 
-A procedural winter-wheat field generator with seasonal growth stages, coherent wind, and close-up botanical inspection.
+A procedural crop-field generator for winter wheat, two-row barley, maize, sunflower, and soybean with seasonal growth stages, coherent wind, and close-up botanical inspection.
 
 ## Run
 
@@ -16,9 +16,10 @@ For a single-file version, download [`standalone/StarHermit-Crops.html`](standal
 
 ## Explore
 
-- **Seasons:** spring stem extension, summer grain filling and ripening, autumn establishment, and winter dormancy. This follows autumn-sown winter wheat in a temperate northern climate.
+- **Five crop studies:** winter wheat, two-row winter barley, grain maize, single-headed sunflower, and branched soybean. Select a crop in the field controls.
+- **Seasons:** autumn-sown wheat and barley establish in autumn, overwinter vegetatively, extend in spring, and fill grain in summer. Spring-sown maize, sunflower, and soybean establish in spring and reproduce in summer; their autumn and winter scenes show cut, dead residue after harvest. These are temperate northern-climate study assumptions, not a planting calendar.
 - **Field controls:** stand density, natural variation, seasonal progression, deterministic seed, wind speed, and wind direction.
-- **Specimen inspection:** whole plant, ear, leaf and collar, and exposed fibrous roots, with anatomy labels and an option to isolate the main culm.
+- **Specimen inspection:** whole plant, reproductive structures, leaves, and exposed roots. Barley includes smooth clasping auricles and long awns; maize has a separate tassel view, silks, and an optional husk cutaway; sunflower has ray and disk florets and a spiral seed head; soybean has trifoliate leaves, axillary flowers, hairy pods, a pod cutaway, and root nodules. Taproot and fibrous-root architectures differ by crop.
 - **Camera:** drag and scroll or pinch. `Space` pauses wind; `I` toggles specimen inspection. The portable renderer provides panning and zooming.
 - **Capture:** save the rendered scene as a PNG.
 
@@ -31,7 +32,11 @@ The primary renderer uses Three.js and WebGL 2. When WebGL initialization is una
 | `index.html` | Application entry point and botanical reference notes |
 | `style.css` | Responsive interface styles |
 | `app.js` | Procedural 3D geometry, instanced field, materials, wind, and controls |
-| `fallback.js` | Portable Canvas renderer |
+| `fallback.js` | Portable Canvas renderer and controls |
+| `crops.js` | Species profiles, phenology, anatomy labels, and camera targets |
+| `crop-model.js` | 3D plant and root geometry for all five crops |
+| `crop-canvas.js` | Portable drawing of the four additional crop types |
+| `scripts/check-crops.mjs` | CPU geometry and portable-drawing regression checks |
 | `vendor/` | Vendored Three.js r170 and OrbitControls |
 | `scripts/build-standalone.py` | Rebuild the self-contained HTML distribution |
 | `standalone/StarHermit-Crops.html` | Ready-to-open single-file distribution |
@@ -47,19 +52,31 @@ Check JavaScript syntax with Node.js:
 ```sh
 node --check app.js
 node --check fallback.js
+node scripts/check-crops.mjs
 ```
+
+The regression suite checks 160 crop, season, progression, and detail combinations; finite geometry and valid indices; deterministic generation; absence of living foliage or fruits on annual winter residue; root nodules; and maize and soybean cutaways. It also exercises the portable drawing routines without a GPU.
 
 ## Botanical scope
 
-This is a botanically informed visual study of an awned winter form of *Triticum aestivum*. The geometry represents alternating leaves, leaf sheaths, stem nodes, ligules and auricles, alternating spikelets with glumes and florets, lemma awns, and a branching root system.
+This is a botanically informed visual study of five representative crops. Wheat is an awned winter form of *Triticum aestivum*; barley is a long-awned, two-row winter form of *Hordeum vulgare*. Maize (*Zea mays*), sunflower (*Helianthus annuus*), and soybean (*Glycine max*) are represented as spring-sown annuals.
 
-It is an illustrative model rather than a scanned cultivar, a calibrated growth or mechanical simulation, or a validated phenotyping instrument. Epidermal cells, stomata, internal floral anatomy, and deep roots are not resolved. The root inspection volume is truncated to approximately 45 cm. Blade and bract surface patterns are procedural visual cues. Development varies with cultivar, location, and weather; the summer scene represents the crop before harvest.
+The crop models distinguish cereal spikelets and auricles, maize tassels and axillary ears, sunflower ray and disk florets and serrate leaves, and soybean compound leaves, papilionaceous flowers, pods, and nodulated taproots. The maize model uses a representative 14-row ear. Fine floret, seed, silk, hair, and nodule counts are illustrative samples rather than measured cultivar traits. Cutaways apply only to specimen inspection; the field retains closed husks and pods.
+
+These are illustrative models rather than scanned cultivars, calibrated growth or mechanical simulations, or validated phenotyping instruments. Epidermal cells, stomata, internal tissues, and pollen grains are not resolved. Root inspection is truncated to approximately 45 cm; actual root systems may extend much deeper. Surface patterns and pubescence are procedural visual cues. Seasonal progression is an interpolation within the selected scene, not a crop forecast. Stand density is a visual plant count, not an agronomic yield model.
 
 References are also available in the application's information dialog:
 
 - [FAO: Botany of the wheat plant](https://www.fao.org/4/y4011e/y4011e05.htm)
 - [Cornell CALS: Small-grain growth stages](https://cals.cornell.edu/field-crops/small-grains/growth-stages)
 - [University of Minnesota Extension: Wheat growth and development](https://extension.umn.edu/agriculture/crop-production/small-grains/spring-wheat-growth-and-development-guide)
+- [NDSU: Two-row barley](https://www.ndsu.edu/agriculture/ag-hub/publications/advanced-two-row-barley)
+- [Purdue: Maize tassels and pollen](https://www.agry.purdue.edu/Ext/corn/news/timeless/Tassels.html)
+- [University of Arizona: Corn growth and development](https://extension.arizona.edu/publication/corn-growth-and-development-stages)
+- [NDSU: Sunflower production](https://www.ndsu.edu/agriculture/extension/publications/sunflower-production-guide)
+- [Cornell: Sunflower leaf arrangement](https://cals.cornell.edu/weed-science/weed-profiles/common-sunflower)
+- [Mississippi State: Soybean stages](https://extension.msstate.edu/publications/guide-soybean-growth-stages)
+- [Penn State: Soybean nodulation](https://extension.psu.edu/evaluating-nodulation-in-soybeans)
 
 ## License
 
