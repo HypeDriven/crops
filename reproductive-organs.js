@@ -248,18 +248,18 @@ export function remasterReproductive(s,p,layout,detail){
 export function regionalFibreCurve(o,index){
  const r=seeded(o.seed+index*104729),points=[],phase=r()*Math.PI*2,angle=r()*Math.PI*2,t0=.08+r()*.84;
  if(o.mode==='lint'){
-  const z=2*r()-1,d=[Math.cos(angle)*Math.sqrt(1-z*z),z,Math.sin(angle)*Math.sqrt(1-z*z)],f=frame(d),loose=index%7===0,curl=.10+r()*.22,frequency=5+r()*9;
+  const z=2*r()-1,d=[Math.cos(angle)*Math.sqrt(1-z*z),z,Math.sin(angle)*Math.sqrt(1-z*z)],f=frame(d),loose=index%7===0,curl=.10+r()*.22,frequency=5+r()*9,root=o.seedOrigins?.[index%o.seedOrigins.length],at=o.at,size=o.size,side=f.side,normal=f.normal;
+  const rootDelta=root?[root[0]+d[0]*o.seedSize[0]-at[0]-size[0]*d[0]*.20,root[1]+d[1]*o.seedSize[1]-at[1]-size[1]*d[1]*.20,root[2]+d[2]*o.seedSize[2]-at[2]-size[2]*d[2]*.20]:null;
   for(let j=0;j<=o.segments;j++){
-   const t=j/o.segments,radial=loose?.82+t*.35:.20+.79*Math.sin(t*Math.PI*.5),wave=Math.sin(t*frequency+phase)-Math.sin(phase),wave2=Math.cos(t*frequency*.73+phase)-Math.cos(phase);
-   const root=o.seedOrigins?.[index%o.seedOrigins.length];
-   points.push(o.at.map((v,k)=>v+o.size[k]*(d[k]*radial+f.side[k]*curl*wave*t+f.normal[k]*curl*wave2*t)+(root?(root[k]+d[k]*o.seedSize[k]-v-o.size[k]*d[k]*.20)*(1-t)**2:0)));
+   const t=j/o.segments,radial=loose?.82+t*.35:.20+.79*Math.sin(t*Math.PI*.5),wave=Math.sin(t*frequency+phase)-Math.sin(phase),wave2=Math.cos(t*frequency*.73+phase)-Math.cos(phase),falloff=rootDelta?(1-t)**2:0;
+   points.push([at[0]+size[0]*(d[0]*radial+side[0]*curl*wave*t+normal[0]*curl*wave2*t)+(rootDelta?rootDelta[0]*falloff:0),at[1]+size[1]*(d[1]*radial+side[1]*curl*wave*t+normal[1]*curl*wave2*t)+(rootDelta?rootDelta[1]*falloff:0),at[2]+size[2]*(d[2]*radial+side[2]*curl*wave*t+normal[2]*curl*wave2*t)+(rootDelta?rootDelta[2]*falloff:0)]);
   }
  }else{
-  const parent=o.body,base=regionalBodyPoint(parent,t0,angle),normal=norm(sub(base,parent.at)),f=frame(normal),L=o.length*(.55+r()*.90);
+  const parent=o.body,base=regionalBodyPoint(parent,t0,angle),normal=norm(sub(base,parent.at)),f=frame(normal),L=o.length*(.55+r()*.90),side=f.side;
   for(let j=0;j<=o.segments;j++){
    const t=j/o.segments;
-   if(o.mode==='husk'){const at=regionalBodyPoint(parent,clamp(t0+(t-.5)*.20),angle+.08*Math.sin(t*9+phase));points.push(add(at,mul(normal,.0003+Math.sin(Math.PI*t)*L)));}
-   else points.push(add(base,add(mul(normal,L*t),mul(f.side,L*.30*Math.sin(t*Math.PI*.6)))));
+   if(o.mode==='husk'){const at=regionalBodyPoint(parent,clamp(t0+(t-.5)*.20),angle+.08*Math.sin(t*9+phase)),offset=.0003+Math.sin(Math.PI*t)*L;points.push([at[0]+normal[0]*offset,at[1]+normal[1]*offset,at[2]+normal[2]*offset]);}
+   else{const axial=L*t,bend=L*.30*Math.sin(t*Math.PI*.6);points.push([base[0]+(normal[0]*axial+side[0]*bend),base[1]+(normal[1]*axial+side[1]*bend),base[2]+(normal[2]*axial+side[2]*bend)]);}
   }
  }
  return points;

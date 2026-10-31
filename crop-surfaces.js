@@ -15,7 +15,9 @@ export function leafShape(p){
 }
 // Shared leaf coordinates (metres): blades, silhouette and vein positions agree
 // across both renderers. Detail changes sampling, never organ dimensions.
-export function regionalLeafLocal(o,t,v){
+const leafFrames=new WeakMap(),bodyFrames=new WeakMap();
+function leafFrame(o,dev){const roll=dev.roll||0,elevation=dev.elevation||0,angle=o.angle;let f=leafFrames.get(o);if(!f||f.roll!==roll||f.elevation!==elevation||f.angle!==angle){f={roll,elevation,angle,cosRoll:Math.cos(roll),sinRoll:Math.sin(roll),cosElevation:Math.cos(elevation),sinElevation:Math.sin(elevation),cosAngle:Math.cos(angle),sinAngle:Math.sin(angle)};leafFrames.set(o,f);}return f;}
+export function regionalLeafLocal(o,t,v,frame=null){
  const dev=o.development||{},shape=o.shape||'ovate',L=o.length,W=o.width;
  let envelope=t<=0||t>=1?0:Math.pow(Math.sin(Math.PI*Math.pow(t,shape==='cordate'||shape==='peltate'?.62:.88)),shape==='grass'?.84:.72);
  if(shape==='lobed')envelope*=.73+.27*Math.cos(t*Math.PI*10);
@@ -31,10 +33,10 @@ export function regionalLeafLocal(o,t,v){
  if(shape==='banana')rise+=Math.pow(Math.abs(v),2)*W*.045*Math.sin(t*Math.PI*12);
  // Rotate the whole surface, including its veins and peltate insertion, in a
  // local frame. Young blades stand up; older blades spread and droop.
- const roll=dev.roll||0,elevation=dev.elevation||0,y=rise*Math.cos(roll)-lateral*Math.sin(roll),z=rise*Math.sin(roll)+lateral*Math.cos(roll)+L*(dev.sweep||0)*(t-offset)**2;
- return [axial*Math.cos(elevation)-y*Math.sin(elevation),axial*Math.sin(elevation)+y*Math.cos(elevation),z];
+ const f=frame||leafFrame(o,dev),y=rise*f.cosRoll-lateral*f.sinRoll,z=rise*f.sinRoll+lateral*f.cosRoll+L*(dev.sweep||0)*(t-offset)**2;
+ return [axial*f.cosElevation-y*f.sinElevation,axial*f.sinElevation+y*f.cosElevation,z];
 }
-export function regionalLeafPoint(o,t,v){const [x,y,z]=regionalLeafLocal(o,t,v),a=o.angle;return[o.at[0]+Math.cos(a)*x-Math.sin(a)*z,o.at[1]+y,o.at[2]+Math.sin(a)*x+Math.cos(a)*z];}
+export function regionalLeafPoint(o,t,v){const f=leafFrame(o,o.development||{}),[x,y,z]=regionalLeafLocal(o,t,v,f);return[o.at[0]+f.cosAngle*x-f.sinAngle*z,o.at[1]+y,o.at[2]+f.sinAngle*x+f.cosAngle*z];}
 export function regionalBodyPoint(o,t,a){
  const [rx,ry,rz]=o.size,shape=o.shape||'round';let envelope=t<=0||t>=1?0:Math.sin(Math.PI*t),y=shape==='round'?-Math.cos(Math.PI*t)*ry:(2*t-1)*ry,x=0;
  if(shape==='pod'){envelope=Math.pow(Math.max(0,envelope),o.inflated?.55:.34)*(1+(o.bulge??.10)*Math.cos((t*(o.seeds||3)-.45)*Math.PI*2));x=ry*(o.curvature??.13)*Math.sin(Math.PI*t)+(o.beak||0)*Math.pow(1-t,12);}
@@ -45,16 +47,13 @@ export function regionalBodyPoint(o,t,a){
  if(shape==='lint-lock')envelope=Math.pow(Math.max(0,envelope),.58)*(1+.07*Math.sin(t*23+Math.cos(a*3)*2)+.035*Math.cos(a*7+t*31));
  const ridge=1+(o.ribs||0)*Math.cos(a*(o.ribCount||6));
  const localX=x+Math.cos(a)*rx*envelope*ridge,localZ=Math.sin(a)*rz*envelope*ridge;
- return regionalFramePoint(o,[localX,y,localZ]);
+ return regionalFrameXYZ(o,localX,y,localZ);
 }
 
 // Organ-local attachment coordinates: stalks, calyces and sutures use the same
 // rigid frame as their fruit, including its yaw, droop and axial roll.
-export function regionalFramePoint(o,[localX,y,localZ]){
- const tilt=o.tilt||0,yaw=o.yaw||0,roll=o.roll||0,ry0=y*Math.cos(roll)-localZ*Math.sin(roll),rz0=y*Math.sin(roll)+localZ*Math.cos(roll);
- const tx=localX*Math.cos(tilt)-ry0*Math.sin(tilt),ty=localX*Math.sin(tilt)+ry0*Math.cos(tilt);
- return [o.at[0]+Math.cos(yaw)*tx-Math.sin(yaw)*rz0,o.at[1]+ty,o.at[2]+Math.sin(yaw)*tx+Math.cos(yaw)*rz0];
-}
+function regionalFrameXYZ(o,localX,y,localZ){const tilt=o.tilt||0,yaw=o.yaw||0,roll=o.roll||0;let f=bodyFrames.get(o);if(!f||f.tilt!==tilt||f.yaw!==yaw||f.roll!==roll){f={tilt,yaw,roll,cosTilt:Math.cos(tilt),sinTilt:Math.sin(tilt),cosYaw:Math.cos(yaw),sinYaw:Math.sin(yaw),cosRoll:Math.cos(roll),sinRoll:Math.sin(roll)};bodyFrames.set(o,f);}const ry0=y*f.cosRoll-localZ*f.sinRoll,rz0=y*f.sinRoll+localZ*f.cosRoll,tx=localX*f.cosTilt-ry0*f.sinTilt,ty=localX*f.sinTilt+ry0*f.cosTilt;return[o.at[0]+f.cosYaw*tx-f.sinYaw*rz0,o.at[1]+ty,o.at[2]+f.sinYaw*tx+f.cosYaw*rz0];}
+export function regionalFramePoint(o,[localX,y,localZ]){return regionalFrameXYZ(o,localX,y,localZ);}
 
 // Thin parametric tissues rather than closed ellipsoids. The same points are
 // sampled by WebGL meshes, Canvas triangles, veins and inspection bounds.
@@ -66,13 +65,13 @@ export function regionalPatchPoint(o,t,v){
  const fold=o.shape==='keel'?Math.pow((v+1)*.5,2):Math.abs(v);
  const y=o.length*((o.cup??.20)*t*t+(o.arch||0)*Math.sin(Math.PI*t))+(o.fold??.12)*fold*o.width*envelope+
   (o.wrinkle||0)*o.width*Math.sin(t*47+v*3)*Math.pow(Math.abs(v),1.6)*envelope+(o.twist||0)*z*t;
- return o.at.map((p,k)=>p+o.axis[k]*x+o.normal[k]*y+o.side[k]*z);
+ return [o.at[0]+o.axis[0]*x+o.normal[0]*y+o.side[0]*z,o.at[1]+o.axis[1]*x+o.normal[1]*y+o.side[1]*z,o.at[2]+o.axis[2]*x+o.normal[2]*y+o.side[2]*z];
 }
 
 export function regionalCorollaPoint(o,t,a){
  const lobes=(.72+.28*Math.cos(a*(o.lobes||5))),mouth=(o.tubeRadius+(o.radius-o.tubeRadius)*Math.pow(t,o.flare??2.7))*(1-Math.pow(t,12)*(1-lobes));
- const ripple=(o.wrinkle||0)*Math.sin(a*27+t*35)*Math.pow(t,3),r=mouth*(1+ripple),height=o.length*t+(o.radius*.16*Math.cos(a*(o.lobes||5)))*Math.pow(t,8);
- return o.at.map((p,k)=>p+o.axis[k]*height+o.side[k]*Math.cos(a)*r+o.normal[k]*Math.sin(a)*r);
+ const ripple=(o.wrinkle||0)*Math.sin(a*27+t*35)*Math.pow(t,3),r=mouth*(1+ripple),height=o.length*t+(o.radius*.16*Math.cos(a*(o.lobes||5)))*Math.pow(t,8),ca=Math.cos(a),sa=Math.sin(a);
+ return [o.at[0]+o.axis[0]*height+o.side[0]*ca*r+o.normal[0]*sa*r,o.at[1]+o.axis[1]*height+o.side[1]*ca*r+o.normal[1]*sa*r,o.at[2]+o.axis[2]*height+o.side[2]*ca*r+o.normal[2]*sa*r];
 }
 
 // Smooth support paths preserve every supplied attachment knot. Sampling is

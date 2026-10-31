@@ -8,7 +8,7 @@ import { SURFACE, leafShape, regionalLeafPoint, regionalBodyPoint, stalkCurve, s
 import {remasterReproductive,reproductivePoint} from './reproductive-organs.js';
 
 const clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
-const TERMINAL_MODELS=new Set(['spike','dense','panicle','finger','cluster','flax','poppy','potato','banana']);
+const TERMINAL_MODELS=new Set(['spike','dense','panicle','finger','cluster','flax','poppy','potato','banana']),OPPOSITE_SPECIES=new Set(['olive','coffee','pomegranate','perilla','yam']),DISTICHOUS_SPECIES=new Set(['faba','pea','lentil']),DISTICHOUS_BRANCH_SPECIES=new Set(['tea','cacao']);
 
 // Rank is initiation order on THIS axis, not world height (or leaflet index).
 // Ages are relative plastochrons, not calibrated days or growing-degree days.
@@ -28,8 +28,8 @@ export function regionalDevelopment(s,p,rank,count,axis=0){
 export function regionalPhyllotaxis(s,p,rank,count,axis=0){
  const r=seeded(organVariation(s,`${s.crop??p.species}/plant-phase`,0,axis).seed),phase=r()*Math.PI*2;
  const q=organVariation(s,'regional-node-angle',rank,axis),noise=q.angle*.45;
- const opposite=['olive','coffee','pomegranate','perilla','yam'].includes(p.species)||p.species==='sesame'&&rank<count*.5;
- const distichous=p.cereal||p.model==='cane'||['faba','pea','lentil'].includes(p.species)||axis>0&&['tea','cacao'].includes(p.species);
+ const opposite=OPPOSITE_SPECIES.has(p.species)||p.species==='sesame'&&rank<count*.5;
+ const distichous=p.cereal||p.model==='cane'||DISTICHOUS_SPECIES.has(p.species)||axis>0&&DISTICHOUS_BRANCH_SPECIES.has(p.species);
  const angle=phase+rank*(opposite?Math.PI/2:distichous?Math.PI:2.399963229728653)+noise;
  return opposite?[angle,angle+Math.PI]:[angle];
 }
@@ -50,8 +50,8 @@ export function regionalAxis(s,p,count,{axis=0,first=.10,last=.99}={}){
 // Heights describe compact representative specimens, including orchard crops.
 export function regionalPlant(s,seed,detail=false,roots=false){
  s={...s,plantSeed:seed};
- const p=profile(s),d=cropDimensions(s),c=cropColors(s),r=seeded(seed),h=d.h,out=[],kind=p.model;
- const surfaceStem=kind==='tree'?SURFACE.BARK:kind==='palm'?SURFACE.PALM:SURFACE.STEM;
+ const p=profile(s),d=cropDimensions(s),c=cropColors(s,d),r=seeded(seed),h=d.h,out=[],kind=p.model;
+ const surfaceStem=kind==='tree'?SURFACE.BARK:kind==='palm'?SURFACE.PALM:SURFACE.STEM,podModel=['legume','capsule','groundlegume'].includes(kind),grainModel=['spike','dense','panicle','finger'].includes(kind),fruitModel=['tree','palm','banana','fruit','cotton'].includes(kind),bladeShape=leafShape(p),waxy=['olive','coffee','tea','cacao'].includes(p.species);
  const petioleRise=(rank,axis=0)=>.28+foliageVariation(s,'petiole-pose',rank,axis).pitch*1.5;
  const tube=(points,radius,color=c.stem,organ=0,surface=organ===5?SURFACE.ROOT:surfaceStem,extra={})=>{
   if(points.length===2&&organ===0&&surface===SURFACE.STEM&&extra.axis===undefined&&!extra.terminal&&!d.residue)points=stalkCurve(points);
@@ -59,16 +59,15 @@ export function regionalPlant(s,seed,detail=false,roots=false){
  };
  let grainSample=0;
  const ball=(at,size,color,organ=2,extra={})=>{
-  const pod=['legume','capsule','groundlegume'].includes(kind),grain=['spike','dense','panicle','finger'].includes(kind),fruit=['tree','palm','banana','fruit','cotton'].includes(kind);
-  const surface=organ===0?SURFACE.STEM:organ===5?SURFACE.ROOT:organ===9?SURFACE.PETAL:pod?SURFACE.POD:grain?SURFACE.GRAIN:kind==='cotton'&&s.maturity>.6?SURFACE.LINT:fruit?SURFACE.FRUIT:SURFACE.POD;
+  const surface=organ===0?SURFACE.STEM:organ===5?SURFACE.ROOT:organ===9?SURFACE.PETAL:podModel?SURFACE.POD:grainModel?SURFACE.GRAIN:kind==='cotton'&&s.maturity>.6?SURFACE.LINT:fruitModel?SURFACE.FRUIT:SURFACE.POD;
   const orientation=organVariation(s,`regional-body/${at.join('/')}`,organ);
-  out.push({type:'ball',at,size,color,organ,surface,yaw:seeded(orientation.seed)()*Math.PI*2,tilt:organ===5?0:orientation.pitch,roll:orientation.twist,sample:grain?grainSample++:0,shape:pod?'pod':grain?'grain':kind==='banana'?'banana':kind==='fruit'?'pepper':'round',ribs:p.species==='cacao'?.08:p.species==='okra'?.06:kind==='fruit'?.10:0,ribCount:p.species==='cacao'?10:kind==='fruit'?4:6,...extra});
+  out.push({type:'ball',at,size,color,organ,surface,yaw:seeded(orientation.seed)()*Math.PI*2,tilt:organ===5?0:orientation.pitch,roll:orientation.twist,sample:grainModel?grainSample++:0,shape:podModel?'pod':grainModel?'grain':kind==='banana'?'banana':kind==='fruit'?'pepper':'round',ribs:p.species==='cacao'?.08:p.species==='okra'?.06:kind==='fruit'?.10:0,ribCount:p.species==='cacao'?10:kind==='fruit'?4:6,...extra});
  };
  const blade=(at,length,width,angle,grass=false,rank=0,extra={})=>{
   const v=foliageVariation(s,`${p.species}/regional-leaf`,rank,extra.development?.axis??0),dev=extra.development||{size:1,widthFactor:1,relativeAge:.5,expansion:1,fold:.03,elevation:0},relativeAge=dev.relativeAge;
   const senescence=s.season==='summer'&&p.life!=='evergreen'?Math.max(0,(s.maturity-.68)/.32)*relativeAge*.42:0;
   const color=mixHex(mixHex(c.leaf,v.shade>0?'#a2b976':'#355431',Math.abs(v.shade)), '#ab9756',senescence);
-  out.push({type:'leaf',at,length:length*dev.size*v.length,width:width*dev.widthFactor*v.width,angle:angle+v.angle*.4,color,grass,shape:leafShape(p),surface:grass?SURFACE.GRASS:['olive','coffee','tea','cacao'].includes(p.species)?SURFACE.WAXY:SURFACE.LEAF,organ:grass?1:6,...extra,development:{...dev,pitch:(dev.pitch||0)+v.pitch,twist:(dev.twist||0)+v.twist,asymmetry:v.asymmetry,roll:v.roll,camber:v.camber,sweep:v.sweep,curl:v.curl}});
+  out.push({type:'leaf',at,length:length*dev.size*v.length,width:width*dev.widthFactor*v.width,angle:angle+v.angle*.4,color,grass,shape:bladeShape,surface:grass?SURFACE.GRASS:waxy?SURFACE.WAXY:SURFACE.LEAF,organ:grass?1:6,...extra,development:{...dev,pitch:(dev.pitch||0)+v.pitch,twist:(dev.twist||0)+v.twist,asymmetry:v.asymmetry,roll:v.roll,camber:v.camber,sweep:v.sweep,curl:v.curl}});
  };
  const apex=(at,scale,axis=0,mode='bud')=>{
   const a=regionalPhyllotaxis(s,p,0,1,axis)[0],rad=Math.min(h*.004,scale*.055),tip=[at[0],at[1]+scale*.20,at[2]];

@@ -10,7 +10,6 @@ import {SURFACE} from './crop-surfaces.js';
 const surfaceShader=`
 varying float vCropSurface;
 varying vec2 vCropUv;
-varying vec3 vCropPosition;
 uniform float uSurfaceDetail;
 float cropHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float cropNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(cropHash(i),cropHash(i+vec2(1.,0.)),f.x),mix(cropHash(i+vec2(0.,1.)),cropHash(i+vec2(1.,1.)),f.x),f.y);}
@@ -76,17 +75,17 @@ export function createPlantMaterial(uniforms,{roots=false}={}){
   Object.assign(shader.uniforms,uniforms);
   shader.vertexShader=shader.vertexShader.replace('#include <common>',`#include <common>
 attribute float organ;attribute float surface;attribute float leafMotion;
-varying float vCropSurface;varying vec2 vCropUv;varying vec3 vCropPosition;
+varying float vCropSurface;varying vec2 vCropUv;
 ${roots?'':windDeclarations}`);
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-vCropSurface=surface;vCropUv=uv;vCropPosition=position;
-${roots?'':`float h=max(position.y,0.);float wave=cropWave();float bend=wave*uWind*.021*uFlex*h*h;
+vCropSurface=surface;vCropUv=uv;
+${roots?'':`float h=max(position.y,0.);float bend=wave*uWind*.021*uFlex*h*h;
 transformed.xz+=uDirection*bend;transformed.y-=abs(bend)*h*.10;
 if(surface==${SURFACE.GRASS}.||surface==${SURFACE.LEAF}.||surface==${SURFACE.WAXY}.){
  float flutter=sin(uTime*3.4+dot(position.xz,uDirection)*3.)*uWind*.0006*leafMotion*uLeafFlutter;
  transformed.y+=flutter;transformed.xz+=vec2(-uDirection.y,uDirection.x)*flutter;}`}`);
   if(!roots)shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
-float slope=2.*cropWave()*uWind*.021*uFlex*max(position.y,0.);
+float wave=cropWave();float slope=2.*wave*uWind*.021*uFlex*max(position.y,0.);
 objectNormal=normalize(vec3(objectNormal.x,objectNormal.y-dot(objectNormal.xz,uDirection)*slope,objectNormal.z));`);
   shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\n'+surfaceShader);
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>

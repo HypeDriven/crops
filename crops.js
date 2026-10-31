@@ -14,9 +14,9 @@ export const CROPS = {
 Object.assign(CROPS,Object.fromEntries(REGIONAL_CROPS.map(p=>[p.id,p])));
 export const profile=s=>CROPS[s.crop||'wheat'];
 export const seeded=seed=>{let a=seed|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};};
-export function mixHex(a,b,t){t=Math.max(0,Math.min(1,t));return '#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,'0')).join('');}
-export function cropDimensions(s){if(profile(s).region&&['barley','maize','sunflower','soybean'].includes(profile(s).model))return cropDimensions({...s,crop:profile(s).model});if(profile(s).region)return regionalDimensions(profile(s),s);const p=profile(s),m=s.maturity,summer=s.season==='summer',residue=!p.cereal&&['autumn','winter'].includes(s.season);let h;if(p.cereal)h=summer?(s.crop==='barley'?.69:.77)+m*.13:s.season==='spring'?.28+m*.45:s.season==='autumn'?.045+m*.075:.055;else if(s.crop==='maize')h=summer?1.7+m*.5:s.season==='spring'?.12+m*.6:residue?(s.season==='winter'?.22:.42-m*.12):.2;else if(s.crop==='sunflower')h=summer?1.35+m*.4:s.season==='spring'?.1+m*.45:s.season==='winter'?.15:.3-m*.08;else h=summer?.58+m*.18:s.season==='spring'?.07+m*.26:s.season==='winter'?.09:.17-m*.04;return{h,ear:summer,reproductive:summer,residue,leaves:residue?0:p.cereal?4:s.crop==='maize'?12:s.crop==='sunflower'?10:7,extent:p.cereal?.16:s.crop==='maize'?.38:s.crop==='sunflower'?.24:.22};}
-export function cropColors(s){const cereal=profile(s).cereal,ripe=cereal&&s.season==='summer'?Math.max(0,(s.maturity-.16)/.84):0,residue=cropDimensions(s).residue;let senescent=residue?1:(!cereal&&s.season==='summer'?Math.max(0,(s.maturity-.76)/.24)*.5:ripe);const cold=s.season==='winter';return{stem:mixHex(cold?'#63744e':'#628348','#ac915c',senescent),leaf:mixHex(cold?'#5c7050':'#4f7e3c','#a79454',senescent),ear:mixHex('#8f9d55','#ceb776',ripe),bract:mixHex('#718b43','#a48a4e',ripe),node:mixHex('#56723d','#8d7849',senescent),edge:mixHex('#365a2d','#8d713e',senescent),vein:mixHex('#9aac6d','#d9c794',senescent),flower:'#dcbf56',petal:'#edbd23',root:'#b39c76',pod:mixHex('#6d8744','#b19a6b',Math.max(0,(s.maturity-.65)/.35))};}
+export function mixHex(a,b,t){t=Math.max(0,Math.min(1,t));const ai=parseInt(a.slice(1),16),bi=parseInt(b.slice(1),16),r=Math.round((ai>>16)*(1-t)+(bi>>16)*t),g=Math.round(((ai>>8)&255)*(1-t)+((bi>>8)&255)*t),blue=Math.round((ai&255)*(1-t)+(bi&255)*t);return '#'+((r<<16)|(g<<8)|blue).toString(16).padStart(6,'0');}
+export function cropDimensions(s){const selected=profile(s);if(selected.region&&['barley','maize','sunflower','soybean'].includes(selected.model))return cropDimensions({...s,crop:selected.model});if(selected.region)return regionalDimensions(selected,s);const p=selected,m=s.maturity,summer=s.season==='summer',residue=!p.cereal&&['autumn','winter'].includes(s.season);let h;if(p.cereal)h=summer?(s.crop==='barley'?.69:.77)+m*.13:s.season==='spring'?.28+m*.45:s.season==='autumn'?.045+m*.075:.055;else if(s.crop==='maize')h=summer?1.7+m*.5:s.season==='spring'?.12+m*.6:residue?(s.season==='winter'?.22:.42-m*.12):.2;else if(s.crop==='sunflower')h=summer?1.35+m*.4:s.season==='spring'?.1+m*.45:s.season==='winter'?.15:.3-m*.08;else h=summer?.58+m*.18:s.season==='spring'?.07+m*.26:s.season==='winter'?.09:.17-m*.04;return{h,ear:summer,reproductive:summer,residue,leaves:residue?0:p.cereal?4:s.crop==='maize'?12:s.crop==='sunflower'?10:7,extent:p.cereal?.16:s.crop==='maize'?.38:s.crop==='sunflower'?.24:.22};}
+export function cropColors(s,d=cropDimensions(s)){const cereal=profile(s).cereal,ripe=cereal&&s.season==='summer'?Math.max(0,(s.maturity-.16)/.84):0,residue=d.residue;let senescent=residue?1:(!cereal&&s.season==='summer'?Math.max(0,(s.maturity-.76)/.24)*.5:ripe);const cold=s.season==='winter';return{stem:mixHex(cold?'#63744e':'#628348','#ac915c',senescent),leaf:mixHex(cold?'#5c7050':'#4f7e3c','#a79454',senescent),ear:mixHex('#8f9d55','#ceb776',ripe),bract:mixHex('#718b43','#a48a4e',ripe),node:mixHex('#56723d','#8d7849',senescent),edge:mixHex('#365a2d','#8d713e',senescent),vein:mixHex('#9aac6d','#d9c794',senescent),flower:'#dcbf56',petal:'#edbd23',root:'#b39c76',pod:mixHex('#6d8744','#b19a6b',Math.max(0,(s.maturity-.65)/.35))};}
 export function seasonalStudy(s){if(profile(s).region)return regionalSeason(s);const p=profile(s),m=s.maturity;if(p.cereal)return{
  spring:['Stem extension','The green awakening.','Jointed culms extend. New leaves unfurl.','Zadoks 30–39 · jointing and flag leaf'],
  summer:['Grain filling',s.crop==='barley'?'A sea of long awns.':'The golden hour.',s.crop==='barley'?'Two fertile rows, slender bracts, and long lemma awns.':'An intricate canopy. A thousand small movements.','Zadoks 71–92 · grain filling to ripe'],
@@ -59,7 +59,7 @@ export function leafDevelopment(s,rank,count,seed=0){
  const envelope=c==='maize'?.48+.52*Math.sin(Math.PI*(u*.88+.06)):c==='sunflower'?.48+.52*Math.sin(Math.PI*(u*.86+.09)):c==='soybean'?.64+.36*Math.sin(Math.PI*(u*.83+.10)):.72+.28*Math.sin(Math.PI*(u*.73+.13));
  const senescence=d.residue?1:s.season==='summer'?Math.max(0,(s.maturity-(.54+.34*u))/.46)*Math.pow(age,.7):0;
  const q=foliageVariation({...s,plantSeed:s.plantSeed??s.seed??seed},'leaf',rank,s.axisId??0),size=envelope*expansion*q.length;
- const base=cropColors(s),leaf=mixHex(base.leaf,'#b4b96c',emerging?.20:0),color=mixHex(mixHex(leaf,q.shade>0?'#abc17e':'#304f2b',Math.abs(q.shade)), '#a28d4a',senescence*.72);
+ const base=cropColors(s,d),leaf=mixHex(base.leaf,'#b4b96c',emerging?.20:0),color=mixHex(mixHex(leaf,q.shade>0?'#abc17e':'#304f2b',Math.abs(q.shade)), '#a28d4a',senescence*.72);
  return{rank,relativeAge:age,expansion,size,widthFactor:Math.sqrt(expansion)*envelope*q.width,aspectRatio:q.width/q.length,fold:emerging?1-expansion:Math.max(0,q.curl*.25),droop:.16+age*.35+senescence*.22+q.pitch,angle:q.angle,pitch:q.pitch*1.8,twist:q.twist,roll:q.roll,camber:q.camber,sweep:q.sweep,curl:q.curl,asymmetry:q.asymmetry,petioleFactor:.65*q.petiole,seed:q.seed,variation:s.variation??.24,color,senescence,emerging};
 }
 export function sunflowerHead(s){const seed=s.plantSeed??s.seed??1847,r=seeded(seed+3841),v=Math.min(1.6,(s.variation??.24)/.24),m=s.maturity,h=cropDimensions(s).h,bud=m<.12,post=m>.76;
@@ -86,12 +86,14 @@ export function soybeanAxisNodes(s,length,count,seed=0){
 }
 
 // Shape coordinates are in metres; shared by mesh and portable renderers.
+const soybeanSurfaceFrames=new WeakMap();
+function soybeanSurfaceFrame(dev){const roll=dev.roll||0,elevation=dev.elevation||0;let f=soybeanSurfaceFrames.get(dev);if(!f||f.roll!==roll||f.elevation!==elevation){f={roll,elevation,cosRoll:Math.cos(roll),sinRoll:Math.sin(roll),sinElevation:Math.sin(elevation)};soybeanSurfaceFrames.set(dev,f);}return f;}
 export function soybeanLeafSurface(t,v,L,W,dev={}){
  const shape=t<=0||t>=1?0:Math.pow(Math.sin(Math.PI*Math.pow(t,.78)),.82);
  const asym=dev.oblique||dev.asymmetry||0,side=v*W*.5*shape*(1+asym*v*(1-t));
- const fold=dev.fold||0,arch=L*((.085+(dev.curl||0)*.20)*Math.sin(Math.PI*t)-(.05+(dev.relativeAge||0)*.07)*t*t)+(dev.twist||0)*side*t;
- const y=arch+Math.abs(v)*W*shape*(.035+fold*.48)+L*t*(Math.sin(dev.elevation||0)+(dev.pitch||0)),z=side*(1-fold*.60)+L*(dev.sweep||0)*t*t,roll=dev.roll||0;
- return [L*t,y*Math.cos(roll)-z*Math.sin(roll),y*Math.sin(roll)+z*Math.cos(roll)];
+ const fold=dev.fold||0,arch=L*((.085+(dev.curl||0)*.20)*Math.sin(Math.PI*t)-(.05+(dev.relativeAge||0)*.07)*t*t)+(dev.twist||0)*side*t,f=soybeanSurfaceFrame(dev);
+ const y=arch+Math.abs(v)*W*shape*(.035+fold*.48)+L*t*(f.sinElevation+(dev.pitch||0)),z=side*(1-fold*.60)+L*(dev.sweep||0)*t*t;
+ return [L*t,y*f.cosRoll-z*f.sinRoll,y*f.sinRoll+z*f.cosRoll];
 }
 export function soybeanPodShape(s,seeds=3,seed=0){
  const r=seeded(seed),fill=Math.max(.08,Math.min(1,(s.maturity-.27)/.35));
@@ -115,24 +117,27 @@ export function fieldPlantTraits(s,seed){
   azimuth:(profile(s).model||s.crop)==='sunflower'?boundedNormal(r)*(42.8*Math.PI/180)*Math.min(1.6,a/.24):r()*Math.PI*2};
 }
 export function sunflowerDiskLayout(f,detail=true){
- const count=detail?f.diskCount:180,r=seeded(f.seed+902),cell=f.radius/Math.sqrt(count);
+ const count=detail?f.diskCount:180,r=seeded(f.seed+902),cell=f.radius/Math.sqrt(count),s={plantSeed:f.seed,variation:f.variation};
  return Array.from({length:count},(_,k)=>{const a=k*2.399963229728653,R=f.radius*Math.sqrt((k+.5)/count)*.993;
   const x=Math.cos(a)*R+(r()-.5)*cell*.07,y=Math.sin(a)*R+(r()-.5)*cell*.07,fraction=R/f.radius;
-  const q=organVariation({plantSeed:f.seed,variation:f.variation},'disk-floret',k),front=f.flowerFront+.010*Math.sin(a*3)+q.pitch*.035;return {x,y,fraction,angle:a,size:cell*Math.max(.87,Math.min(1.06,q.width)),height:q.depth,length:1+(q.length-1)*.20,width:1+(q.width-1)*.20,phase:f.post?'seed':fraction<front-.055?'bud':fraction>front+.055?'spent':'flower'};
+  const q=organVariation(s,'disk-floret',k),front=f.flowerFront+.010*Math.sin(a*3)+q.pitch*.035;return {x,y,fraction,angle:a,size:cell*Math.max(.87,Math.min(1.06,q.width)),height:q.depth,length:1+(q.length-1)*.20,width:1+(q.width-1)*.20,phase:f.post?'seed':fraction<front-.055?'bud':fraction>front+.055?'spent':'flower'};
  });
 }
 
 // Independent random streams are keyed by biological identity, never triangle
 // count or drawing order. The same organ therefore survives LOD/renderer changes.
+const organCache=new Map(),vigourCache=new Map();
+function identityHash(x){const text=String(x);let h=2166136261;for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);h=Math.imul(h^c,16777619);if(c>=0xd800&&c<=0xdbff&&i+1<text.length){const next=text.charCodeAt(i+1);if(next>=0xdc00&&next<=0xdfff)i++;}}return h>>>0;}
 export function organVariation(s,kind,index=0,axis=0){
- const plantSeed=s.plantSeed??s.seed??1847,a=Math.min(2,Math.max(0,(s.variation??.24)/.24));
- const hash=x=>{let h=2166136261;for(const c of String(x))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
- const identity=hash(`${plantSeed}/${axis}/${kind}/${index}`),r=seeded(identity),parent=boundedNormal(seeded(hash(`${plantSeed}/${axis}/vigour`))),local=boundedNormal(r),widthNoise=boundedNormal(r);
- const positive=(x,lo=.68,hi=1.42)=>Math.max(lo,Math.min(hi,Math.exp(x*a)));
- return {seed:identity,strength:a,length:positive(parent*.035+local*.115),width:positive(parent*.030+local*.055+widthNoise*.105),depth:positive(local*.04+boundedNormal(r)*.075),
+ const plantSeed=s.plantSeed??s.seed??1847,a=Math.min(2,Math.max(0,(s.variation??.24)/.24)),identityKey=`${plantSeed}/${axis}/${kind}/${index}`,cacheable=kind==='stem'||typeof kind==='string'&&(kind.endsWith('/plant-phase')||kind.endsWith('/shoot-posture')),cached=cacheable&&organCache.get(identityKey);
+ if(cached&&cached.strength===a)return{...cached};
+ const parentKey=`${plantSeed}/${axis}`;let parent=vigourCache.get(parentKey);if(parent===undefined){parent=boundedNormal(seeded(identityHash(parentKey+'/vigour')));if(vigourCache.size>=4096)vigourCache.clear();vigourCache.set(parentKey,parent);}
+ const identity=identityHash(identityKey),r=seeded(identity),local=boundedNormal(r),widthNoise=boundedNormal(r);
+ const positive=(x,lo=.68,hi=1.42)=>Math.max(lo,Math.min(hi,Math.exp(x*a))),result={seed:identity,strength:a,length:positive(parent*.035+local*.115),width:positive(parent*.030+local*.055+widthNoise*.105),depth:positive(local*.04+boundedNormal(r)*.075),
   petiole:positive(parent*.025+local*.05+boundedNormal(r)*.11),angle:boundedNormal(r)*a*.11,pitch:boundedNormal(r)*a*.075,
   curl:boundedNormal(r)*a*.07,twist:boundedNormal(r)*a*.12,asymmetry:boundedNormal(r)*a*.09,
   spacing:positive(parent*.025+boundedNormal(r)*.15),shade:boundedNormal(r)*a*.035,density:positive(boundedNormal(r)*.12),taper:positive(boundedNormal(r)*.09)};
+ if(cacheable){if(organCache.size>=2048)organCache.clear();organCache.set(identityKey,result);return{...result};}return result;
 }
 // A shoot has a coherent posture, but each blade has its own residual pose and
 // continuous shape. Bounds are illustrative, not cultivar measurements.
@@ -146,10 +151,11 @@ export function foliageVariation(s,kind,index=0,axis=0){
 }
 export function axisNodeFractions(s,fractions,axis=0,shortenTip=false){
  if(fractions.length<3)return [...fractions];
- const lengths=fractions.slice(1).map((t,i)=>(t-fractions[i])*organVariation(s,'internode',i,axis).spacing);
- if(shortenTip)lengths[lengths.length-1]=Math.min(lengths.at(-1),lengths.at(-2)*.80);
- const scale=(fractions.at(-1)-fractions[0])/lengths.reduce((a,b)=>a+b,0),result=[fractions[0]];
- for(const length of lengths)result.push(result.at(-1)+length*scale);result[result.length-1]=fractions.at(-1);return result;
+ const count=fractions.length,last=count-1,lengths=new Array(last);let total=0;
+ for(let i=0;i<last;i++){const length=(fractions[i+1]-fractions[i])*organVariation(s,'internode',i,axis).spacing;lengths[i]=length;total+=length;}
+ if(shortenTip){const shortened=Math.min(lengths[last-1],lengths[last-2]*.80);total+=shortened-lengths[last-1];lengths[last-1]=shortened;}
+ const scale=(fractions[last]-fractions[0])/total,result=[fractions[0]];let current=fractions[0];
+ for(const length of lengths){current+=length*scale;result.push(current);}result[last]=fractions[last];return result;
 }
 export function soybeanBranches(s){const h=cropDimensions(s).h;
  return Array.from({length:3},(_,i)=>{const q=organVariation(s,'branch',i),angle=i*2.39996+.8+q.angle,startY=h*(.17+q.pitch*.10),height=h*Math.max(.43,Math.min(.73,(.56+i*.035)*q.length)),spread=.13*q.width;
