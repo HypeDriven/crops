@@ -34,7 +34,7 @@ for(const p of shared)for(const season of ['spring','summer','autumn','winter'])
  if(!d.dormant){
   const termination=shootTermination(s),tips=low.filter(o=>o.terminal);
   assert(tips.length||termination==='terminal-inflorescence',p.id+' living apex is covered');
-  if(termination==='terminal-inflorescence')assert(!tips.some(o=>o.terminal==='bud'||o.terminal==='spear'),p.id+' terminal flowers replace growing apex');
+  if(termination==='terminal-inflorescence')assert(!tips.some(o=>(o.axis??o.development?.axis??0)===0&&(o.terminal==='bud'||o.terminal==='spear')),p.id+' terminal flowers replace growing apex');
  }
 }
 const bySpecies=species=>shared.find(p=>p.species===species),state=p=>({crop:p.id,season:'spring',maturity:.65,seed:1847,variation:0});

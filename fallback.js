@@ -5,7 +5,7 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 // Portable renderer for devices without WebGL. Procedural geometry is drawn into
 // per-season atlases; perspective placement and coherent wind remain live.
-import { populateCropSelect, profile, cropDimensions, cropColors, inspection, anatomyLabels, syncCropUI, configureDensity, densityName, leafDevelopment, fieldPlantTraits, organVariation, axisNodeFractions, cerealSpike } from './crops.js';
+import { populateCropSelect, profile, cropDimensions, cropColors, inspection, anatomyLabels, syncCropUI, configureDensity, densityName, leafDevelopment, fieldPlantTraits, organVariation, axisNodeFractions, wheatSpikeLayout } from './crops.js';
 import { portablePoint } from './crop-surfaces.js';
 import { regionalStudy } from './regional-plants.js';
 import { drawCrop, drawTaproots, drawLeafWhorl } from './crop-canvas.js';
@@ -20,7 +20,26 @@ function blend(a,b,t){const ax=parseInt(a.slice(1),16),bx=parseInt(b.slice(1),16
 function palette(){return cropColors(S);}
 function dims(){return cropDimensions(S);}
 function path(c,points,color,line=1){c.beginPath();c.moveTo(...points[0]);for(let i=1;i<points.length;i++)c.lineTo(...points[i]);c.strokeStyle=color;c.lineWidth=line;c.stroke();}
-function ear(c,x,y,scale,seed,detail=1){const plantState={...S,plantSeed:seed},r=R(seed),p=palette(),spike=cerealSpike(plantState),n=spike.nodes.length,length=spike.length*scale;c.save();c.translate(x,y);path(c,[[0,0],[.004*scale,-length*.6],[.009*scale,-length]],p.stem,Math.max(.5,.0019*scale));for(let i=0;i<n;i++){const t=spike.nodes[i],organ=organVariation(plantState,'spikelet',i),side=i%2?1:-1,taper=(.65+.35*Math.sin(t*Math.PI))*organ.width*spike.width,xx=(side*.003+.009*t*t)*scale,yy=-t*length;for(let f=0;f<3;f++){let gx=xx+side*(.002+f*.001)*scale+(f-1)*.0008*scale,gy=yy-f*.0015*scale,l=(.0136-f*.0008)*taper*organ.length*scale,wide=.0034*taper*scale;c.save();c.translate(gx,gy);c.rotate(side*.25+(f-1)*.09);let gradient=c.createLinearGradient(-wide,0,wide,0);gradient.addColorStop(0,p.edge);gradient.addColorStop(.38,p.ear);gradient.addColorStop(.65,p.vein);gradient.addColorStop(1,p.ear);c.fillStyle=gradient;c.beginPath();c.moveTo(0,0);c.bezierCurveTo(-wide,-l*.2,-wide,-l*.65,0,-l);c.bezierCurveTo(wide,-l*.55,wide,-l*.15,0,0);c.fill();c.strokeStyle=p.edge;c.lineWidth=Math.max(.15,scale*.00014);c.stroke();if(detail){for(let v=-1;v<=1;v++){c.beginPath();c.moveTo(v*wide*.25,-l*.08);c.quadraticCurveTo(v*wide*.6,-l*.6,0,-l*.96);c.strokeStyle=v===0?p.vein:p.edge;c.lineWidth=scale*.00011;c.stroke();}}const al=.028*organVariation(plantState,'awn',i*3+f).length*scale*taper;c.beginPath();c.moveTo(0,-l*.96);c.quadraticCurveTo(side*al*.12,-l-al*.5,side*al*.22,-l-al);c.strokeStyle=p.vein;c.lineWidth=Math.max(.24,scale*.00019);c.stroke();c.restore();}if(detail){for(let s of[-1,1]){let width=.0032*scale*taper;c.beginPath();c.moveTo(xx,yy+.001*scale);c.quadraticCurveTo(xx+side*width+s*.001*scale,yy-.004*scale,xx+side*.002*scale,yy-.014*scale*taper);c.quadraticCurveTo(xx+side*.005*scale,yy-.006*scale,xx,yy+.001*scale);c.fillStyle=p.ear;c.globalAlpha=.62;c.fill();c.globalAlpha=1;c.strokeStyle=p.edge;c.lineWidth=scale*.00014;c.stroke();}}}c.restore();}
+function ear(c,x,y,scale,seed,detail=1){
+ const plantState={...S,plantSeed:seed},p=palette(),spike=wheatSpikeLayout(plantState),project=q=>portablePoint(q,scale);
+ c.save();c.translate(x,y);path(c,spike.rachis.map(project),p.stem,Math.max(.5,.0019*scale));
+ const shell=(o,color)=>{
+  const [bx,by]=project(o.base),width=Math.hypot(Math.cos(o.angle)*o.width,o.depth*.35)*scale,L=o.length*scale,skew=Math.sin(o.angle)*L*.18,steps=detail?32:10,
+   point=(t,side)=>[bx+skew*t+side*width*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.72),by-L*t];
+  const gradient=c.createLinearGradient(bx-width,by,bx+width,by);gradient.addColorStop(0,p.edge);gradient.addColorStop(.40,color);gradient.addColorStop(.62,p.vein);gradient.addColorStop(1,color);
+  c.beginPath();c.moveTo(...point(0,0));for(let i=1;i<=steps;i++)c.lineTo(...point(i/steps,-1));for(let i=steps;i>=0;i--)c.lineTo(...point(i/steps,1));c.closePath();c.fillStyle=gradient;c.fill();c.strokeStyle=p.edge;c.lineWidth=Math.max(.12,.00012*scale);c.stroke();
+  if(detail)for(const side of[-.45,0,.45])path(c,Array.from({length:20},(_,i)=>point(.05+i/19*.90,side)),side===0?p.vein:p.edge,Math.max(.10,.00010*scale));
+ };
+ for(const site of spike.spikelets){
+  path(c,site.rachilla.map(project),p.bract,Math.max(.4,.0011*scale));
+  for(const glume of site.glumes){path(c,[site.base,glume.base].map(project),p.bract,Math.max(.3,.0006*scale));shell(glume,p.bract);}
+  for(const floret of site.florets){
+   path(c,[floret.node,floret.base].map(project),p.bract,Math.max(.3,.0006*scale));shell(floret,p.ear);
+   const end=floret.awnStart.map((v,k)=>v+floret.awnTipOffset[k]);path(c,[floret.awnStart,end].map(project),p.vein,Math.max(.20,.00019*scale));
+  }
+ }
+ c.restore();
+}
 function blade(c,x,y,len,width,angle,droop,detail,phase=0,dev=null){const p=dev?{...palette(),leaf:dev.color}:palette();c.save();c.translate(x,y);let a=angle+Math.sin(phase)*.04+(dev?.angle||0);if(angle>Math.PI/2){c.scale(-1,1);c.rotate(-.12+Math.sin(phase)*.04);}else c.rotate(a);let endX=len*.78,endY=-len*.17+len*droop*.2;
 const center=t=>[len*t*.78,-len*(Math.sin(t*Math.PI*.8)*.56-droop*t*t)];const segments=detail?45:12,left=[],right=[];for(let i=0;i<=segments;i++){let t=i/segments,[xx,yy]=center(t),ww=(i===0||i===segments)?0:width*Math.pow(Math.sin(Math.PI*Math.pow(t,.7)),.68)*.5;left.push([xx,yy-ww]);right.push([xx,yy+ww*(1+(dev?.asymmetry||0))]);}c.beginPath();c.moveTo(...left[0]);for(let pp of left)c.lineTo(...pp);for(let pp of right.reverse())c.lineTo(...pp);c.closePath();let gradient=c.createLinearGradient(0,-width*2,0,width*2);gradient.addColorStop(0,p.edge);gradient.addColorStop(.4,p.leaf);gradient.addColorStop(.55,p.vein);gradient.addColorStop(1,p.leaf);c.fillStyle=gradient;c.fill();c.strokeStyle=p.edge;c.lineWidth=Math.max(.2,width*.022);c.stroke();
 if(detail){c.save();c.clip();for(let stripe=-6;stripe<=6;stripe++){c.beginPath();for(let i=0;i<=segments;i++){let t=i/segments,[xx,yy]=center(t),ww=(i===0||i===segments)?0:width*Math.pow(Math.sin(Math.PI*Math.pow(t,.7)),.68)*.5;let pt=[xx,yy+stripe/7*ww];i?c.lineTo(...pt):c.moveTo(...pt);}c.strokeStyle=stripe===0?p.vein:(stripe%2?p.edge:p.vein);c.globalAlpha=stripe===0?.8:.32;c.lineWidth=width*(stripe===0?.025:.012);c.stroke();}if(width>18){const rr=R(237);for(let i=0;i<400;i++){let t=rr(),[xx,yy]=center(t),ww=(i===0||i===segments)?0:width*Math.pow(Math.sin(Math.PI*Math.pow(t,.7)),.68)*.5;c.fillStyle=i%2?'#e7e5b3':'#435e31';c.globalAlpha=.08;c.fillRect(xx,yy+(rr()-.5)*ww*1.8,width*.015,width*.004);}}c.restore();}c.restore();}

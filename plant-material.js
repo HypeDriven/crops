@@ -71,11 +71,11 @@ return sin(uTime*1.4-phase)*.62+sin(uTime*.73-phase*.47)*.32+sin(uTime*2.5-phase
 export function createPlantMaterial(uniforms,{roots=false}={}){
  const material=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.8,metalness:0});
  material.name=roots?'Procedural root surfaces':'Procedural crop surfaces';
- material.customProgramCacheKey=()=>roots?'crop-surfaces-root-v2':'crop-surfaces-wind-v2';
+ material.customProgramCacheKey=()=>roots?'crop-surfaces-root-v2':'crop-surfaces-wind-v3';
  material.onBeforeCompile=shader=>{
   Object.assign(shader.uniforms,uniforms);
   shader.vertexShader=shader.vertexShader.replace('#include <common>',`#include <common>
-attribute float organ;attribute float surface;
+attribute float organ;attribute float surface;attribute float leafMotion;
 varying float vCropSurface;varying vec2 vCropUv;varying vec3 vCropPosition;
 ${roots?'':windDeclarations}`);
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
@@ -83,7 +83,7 @@ vCropSurface=surface;vCropUv=uv;vCropPosition=position;
 ${roots?'':`float h=max(position.y,0.);float wave=cropWave();float bend=wave*uWind*.021*uFlex*h*h;
 transformed.xz+=uDirection*bend;transformed.y-=abs(bend)*h*.10;
 if(surface==${SURFACE.GRASS}.||surface==${SURFACE.LEAF}.||surface==${SURFACE.WAXY}.){
- float flutter=sin(uTime*7.5+dot(position.xz,uDirection)*3.+uv.y*9.)*uWind*.0006*uv.y*uLeafFlutter;
+ float flutter=sin(uTime*3.4+dot(position.xz,uDirection)*3.)*uWind*.0006*leafMotion*uLeafFlutter;
  transformed.y+=flutter;transformed.xz+=vec2(-uDirection.y,uDirection.x)*flutter;}`}`);
   if(!roots)shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
 float slope=2.*cropWave()*uWind*.021*uFlex*max(position.y,0.);

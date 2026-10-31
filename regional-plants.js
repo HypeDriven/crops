@@ -2,9 +2,9 @@
 Required Notice: Copyright 2026 Hype Driven Development Inc. (https://hypedriven.com)
 PolyForm Noncommercial 1.0.0 with additional permission; see LICENSE.
 */
-import { profile, cropDimensions, cropColors, seeded, organVariation, mixHex } from './crops.js';
+import { profile, cropDimensions, cropColors, seeded, organVariation, foliageVariation, mixHex } from './crops.js';
 
-import { SURFACE, leafShape, regionalLeafPoint, regionalBodyPoint } from './crop-surfaces.js';
+import { SURFACE, leafShape, regionalLeafPoint, regionalBodyPoint, stalkCurve, stalkPoint } from './crop-surfaces.js';
 import {remasterReproductive,reproductivePoint} from './reproductive-organs.js';
 
 const clamp=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
@@ -26,7 +26,7 @@ export function regionalDevelopment(s,p,rank,count,axis=0){
 // Phyllotaxis constrains the distribution. Noise is bounded around the species
 // pattern; a random plant phase rotates the whole arrangement, even at variation=0.
 export function regionalPhyllotaxis(s,p,rank,count,axis=0){
- const r=seeded((s.plantSeed??s.seed??1847)+axis*7919+619),phase=r()*Math.PI*2;
+ const r=seeded(organVariation(s,`${s.crop??p.species}/plant-phase`,0,axis).seed),phase=r()*Math.PI*2;
  const q=organVariation(s,'regional-node-angle',rank,axis),noise=q.angle*.45;
  const opposite=['olive','coffee','pomegranate','perilla','yam'].includes(p.species)||p.species==='sesame'&&rank<count*.5;
  const distichous=p.cereal||p.model==='cane'||['faba','pea','lentil'].includes(p.species)||axis>0&&['tea','cacao'].includes(p.species);
@@ -52,7 +52,11 @@ export function regionalPlant(s,seed,detail=false,roots=false){
  s={...s,plantSeed:seed};
  const p=profile(s),d=cropDimensions(s),c=cropColors(s),r=seeded(seed),h=d.h,out=[],kind=p.model;
  const surfaceStem=kind==='tree'?SURFACE.BARK:kind==='palm'?SURFACE.PALM:SURFACE.STEM;
- const tube=(points,radius,color=c.stem,organ=0,surface=organ===5?SURFACE.ROOT:surfaceStem,extra={})=>out.push({type:'tube',points,radii:points.map((_,i)=>radius*(1-i/(points.length-1)*.88)),color,organ,surface,...extra});
+ const petioleRise=(rank,axis=0)=>.28+foliageVariation(s,'petiole-pose',rank,axis).pitch*1.5;
+ const tube=(points,radius,color=c.stem,organ=0,surface=organ===5?SURFACE.ROOT:surfaceStem,extra={})=>{
+  if(points.length===2&&organ===0&&surface===SURFACE.STEM&&extra.axis===undefined&&!extra.terminal&&!d.residue)points=stalkCurve(points);
+  return out.push({type:'tube',points,radii:points.map((_,i)=>radius*(1-i/(points.length-1)*.88)),color,organ,surface,...extra});
+ };
  let grainSample=0;
  const ball=(at,size,color,organ=2,extra={})=>{
   const pod=['legume','capsule','groundlegume'].includes(kind),grain=['spike','dense','panicle','finger'].includes(kind),fruit=['tree','palm','banana','fruit','cotton'].includes(kind);
@@ -61,10 +65,10 @@ export function regionalPlant(s,seed,detail=false,roots=false){
   out.push({type:'ball',at,size,color,organ,surface,yaw:seeded(orientation.seed)()*Math.PI*2,tilt:organ===5?0:orientation.pitch,roll:orientation.twist,sample:grain?grainSample++:0,shape:pod?'pod':grain?'grain':kind==='banana'?'banana':kind==='fruit'?'pepper':'round',ribs:p.species==='cacao'?.08:p.species==='okra'?.06:kind==='fruit'?.10:0,ribCount:p.species==='cacao'?10:kind==='fruit'?4:6,...extra});
  };
  const blade=(at,length,width,angle,grass=false,rank=0,extra={})=>{
-  const v=organVariation(s,'regional-leaf',rank,extra.development?.axis??0),dev=extra.development||{size:1,widthFactor:1,relativeAge:.5,expansion:1,fold:.03,elevation:0},relativeAge=dev.relativeAge;
+  const v=foliageVariation(s,`${p.species}/regional-leaf`,rank,extra.development?.axis??0),dev=extra.development||{size:1,widthFactor:1,relativeAge:.5,expansion:1,fold:.03,elevation:0},relativeAge=dev.relativeAge;
   const senescence=s.season==='summer'&&p.life!=='evergreen'?Math.max(0,(s.maturity-.68)/.32)*relativeAge*.42:0;
   const color=mixHex(mixHex(c.leaf,v.shade>0?'#a2b976':'#355431',Math.abs(v.shade)), '#ab9756',senescence);
-  out.push({type:'leaf',at,length:length*dev.size*v.length,width:width*dev.widthFactor*v.width,angle:angle+v.angle*.4,color,grass,shape:leafShape(p),surface:grass?SURFACE.GRASS:['olive','coffee','tea','cacao'].includes(p.species)?SURFACE.WAXY:SURFACE.LEAF,organ:grass?1:6,...extra,development:{...dev,pitch:(dev.pitch||0)+v.pitch,twist:(dev.twist||0)+v.twist,asymmetry:v.asymmetry,roll:v.twist*.6}});
+  out.push({type:'leaf',at,length:length*dev.size*v.length,width:width*dev.widthFactor*v.width,angle:angle+v.angle*.4,color,grass,shape:leafShape(p),surface:grass?SURFACE.GRASS:['olive','coffee','tea','cacao'].includes(p.species)?SURFACE.WAXY:SURFACE.LEAF,organ:grass?1:6,...extra,development:{...dev,pitch:(dev.pitch||0)+v.pitch,twist:(dev.twist||0)+v.twist,asymmetry:v.asymmetry,roll:v.roll,camber:v.camber,sweep:v.sweep,curl:v.curl}});
  };
  const apex=(at,scale,axis=0,mode='bud')=>{
   const a=regionalPhyllotaxis(s,p,0,1,axis)[0],rad=Math.min(h*.004,scale*.055),tip=[at[0],at[1]+scale*.20,at[2]];
@@ -114,7 +118,7 @@ export function regionalPlant(s,seed,detail=false,roots=false){
    for(let j=1;j<13;j++)for(const sign of [-1,1])blade(points[j],L*.38*Math.pow(Math.sin(Math.PI*j/13),.55),L*.025,a+sign*1.03,true,i*40+j*2+sign,{development:{...dev,size:1,widthFactor:1,elevation:(1-dev.expansion)*.7,axis:i+1}});
   }
   apex([h*.04,h,0],h*.26,0,'spear');
-  if(reproductive)for(let i=0;i<(p.species==='coconut'?6:24);i++){const a=i*2.4,rad=p.species==='coconut'?.09:.025;ball([h*.04+Math.cos(a)*h*.09,h-.16-Math.floor(i/6)*.035,Math.sin(a)*h*.09],[rad,rad*1.3,rad],p.species==='oilpalm'?'#b65a29':p.species==='date'?'#ad7638':'#7a8940');}
+  if(reproductive)for(let i=0;i<(p.species==='coconut'?6:24);i++){const a=i*2.4,rad=p.species==='coconut'?.09:.025;ball([h*.04+Math.cos(a)*h*.09,h-.16-Math.floor(i/6)*.035,Math.sin(a)*h*.09],[rad,rad*1.3,rad],p.species==='oilpalm'?'#b65a29':p.species==='date'?'#ad7638':'#7a8940',2,{supportAt:[h*.04,h-.08,0]});}
   return finish();
  }
  if(kind==='banana'){
@@ -129,7 +133,43 @@ export function regionalPlant(s,seed,detail=false,roots=false){
   // The cigar leaf is replaced by the terminal hanging peduncle at flowering.
   if(reproductive)tube([[.01,h,0],[.06,h+h*.04,0],[.14,h*.80,0],[.14,h*.65,0]],h*.012,c.stem,2,SURFACE.STEM,{terminal:'inflorescence'});
   else apex([.01,h,0],h*.20,0,'spear');
-  if(reproductive)for(let j=0;j<4;j++)for(let k=0;k<6;k++)ball([.14+Math.cos(k)*.07,h*.65-j*.07,Math.sin(k)*.07],[.025,.085,.025],s.maturity>.8?'#c4b950':'#77963e');
+  if(reproductive)tube([[.14,h*.65,0],[.14,h*.65-.30,0]],h*.008,c.stem,2,SURFACE.STEM);
+  if(reproductive)for(let j=0;j<4;j++)for(let k=0;k<6;k++)ball([.14+Math.cos(k)*.07,h*.65-j*.07,Math.sin(k)*.07],[.025,.085,.025],s.maturity>.8?'#c4b950':'#77963e',2,{supportAt:[.14,h*.65-j*.07,0]});
+  return finish();
+ }
+ if(kind==='tree'&&p.species==='cacao'){
+  // Dimorphic cacao: an upright trunk terminates in a jorquette; fan branches
+  // carry distichous foliage. Pods arise on older wood, never on leaf tips.
+  const phase=regionalPhyllotaxis(s,p,0,1)[0],trunk=[[0,0,0],[h*.012,h*.27,0],[h*.024,h*.55,h*.009]],hub=trunk.at(-1);
+  const pathAt=(points,t)=>{const f=Math.max(0,Math.min(1,t))*(points.length-1),i=Math.min(points.length-2,Math.floor(f));return points[i].map((v,k)=>v+(points[i+1][k]-v)*(f-i));};
+  tube(trunk,h*.022,'#75614b',0,SURFACE.BARK,{radii:[h*.022,h*.018,h*.012],axis:0,role:'Cacao orthotropic trunk'});
+  const flush=(points,angle,axis,count=7,age=.8)=>{
+   const nodes=regionalAxis(s,p,count,{axis,first:.22,last:.98});
+   for(const [i,node] of nodes.entries()){
+    const at=pathAt(points,node.t),q=foliageVariation(s,'cacao-fan-leaf',i,axis),a=angle+(i%2?1:-1)*(1.02+q.angle*.45),dev={...node.dev,axis,
+     size:node.dev.size*(.78+.22*age),widthFactor:node.dev.widthFactor,
+     elevation:-.10-(1-node.dev.expansion)*.45,droop:.12+node.dev.relativeAge*.16};
+    const L=h*.017*dev.petioleFactor*q.petiole,end=[at[0]+Math.cos(a)*L,at[1]+L*.20,at[2]+Math.sin(a)*L];
+    tube([at,end],h*.00065,c.stem,0,SURFACE.STEM,{development:dev,axis});
+    blade(end,h*.17,h*.050,a,false,axis*100+i,{development:dev,role:'Cacao fan leaf'});
+    const leaf=out.at(-1);leaf.color=mixHex(leaf.color,'#b38561',(1-dev.expansion)*.70);
+   }
+   apex(points.at(-1),h*.025,axis,'bud');
+  };
+  for(let i=0;i<5;i++){
+   const axis=i+1,q=foliageVariation(s,'cacao-scaffold',i),a=phase+i*Math.PI*2/5+q.angle*.55,L=h*.40*q.length;
+   const points=Array.from({length:7},(_,j)=>{const t=j/6;return[hub[0]+Math.cos(a)*L*t-Math.sin(a)*L*q.sweep*t*t,hub[1]+L*((.36+q.pitch*.6)*t+.10*Math.sin(Math.PI*t)),hub[2]+Math.sin(a)*L*t+Math.cos(a)*L*q.sweep*t*t];});
+   tube(points,h*.009,'#78664d',0,SURFACE.BARK,{axis,role:'Cacao fan branch'});flush(points,a,axis);
+   for(let j=0;j<2;j++){
+    const at=pathAt(points,.48+j*.24),branchAxis=20+i*2+j,pose=foliageVariation(s,'cacao-secondary',j,axis),aa=a+(j?1:-1)*(.65+pose.angle),length=L*(.48-j*.08)*pose.length;
+    const secondary=Array.from({length:5},(_,k)=>{const t=k/4;return[at[0]+Math.cos(aa)*length*t,at[1]+length*(.38*t+.10*Math.sin(Math.PI*t)),at[2]+Math.sin(aa)*length*t];});
+    tube(secondary,h*.0038,'#827051',0,SURFACE.BARK,{axis:branchAxis});flush(secondary,aa,branchAxis,5,.65);
+   }
+  }
+  if(reproductive)for(let i=0;i<5;i++){
+   const t=.25+i*.13,base=pathAt(trunk,t),a=phase+i*2.399963+organVariation(s,'cacao-pod-angle',i).angle,R=h*(.026+seeded(seed+i*317)()*.012),at=[base[0]+Math.cos(a)*(R+h*.024),base[1]-.012,base[2]+Math.sin(a)*(R+h*.024)];
+   ball(at,[R,R*2.05,R*.93],mixHex('#b9a34c','#c57539',i/7),2,{supportAt:base,yaw:a,tilt:.20+organVariation(s,'cacao-pod-pitch',i).pitch,role:'Cauliflorous cacao pod'});
+  }
   return finish();
  }
  if(kind==='tree'){
@@ -137,15 +177,15 @@ export function regionalPlant(s,seed,detail=false,roots=false){
   tube([stem(0),...main.map(n=>stem(n.t)),stem(1)],h*.023,'#786548',0,SURFACE.BARK,{axis:0});
   apex(stem(1),h*.045,0,d.dormant?'dormant-bud':'bud');
   for(const [i,node] of main.entries())for(const [side,a] of node.angles.entries()){
-   const axis=1+i*2+side,base=stem(node.t),length=h*.32*node.dev.size, end=[base[0]+Math.cos(a)*length,base[1]+length*.50,Math.sin(a)*length];
-   const branch=regionalAxis(s,p,5,{axis,first:.16,last:.985}),point=t=>base.map((v,j)=>v+(end[j]-v)*t);
+   const axis=1+i*2+side,base=stem(node.t),length=h*.32*node.dev.size*organVariation(s,'orchard-branch',i,axis).length, end=[base[0]+Math.cos(a)*length,base[1]+length*(.50+foliageVariation(s,'branch-pose',i,axis).pitch),Math.sin(a)*length];
+   const branch=regionalAxis(s,p,7,{axis,first:.16,last:.985}),point=t=>base.map((v,j)=>v+(end[j]-v)*t);
    tube([base,...branch.map(n=>point(n.t)),end],h*.008*Math.max(.15,node.dev.size),'#786548',0,SURFACE.BARK,{axis,development:node.dev});
    if(d.dormant){apex(end,h*.018,axis,'dormant-bud');continue;}
    for(const [k,leafNode] of branch.entries())for(const [pair,angle] of leafNode.angles.entries()){
     const at=point(leafNode.t),dev={...leafNode.dev,size:leafNode.dev.size*Math.sqrt(node.dev.size),widthFactor:leafNode.dev.widthFactor*Math.sqrt(node.dev.size)};
-    const petiole=h*.018*dev.petioleFactor,tip=[at[0]+Math.cos(angle)*petiole,at[1]+petiole*.25,at[2]+Math.sin(angle)*petiole];
+    const petiole=h*.018*dev.petioleFactor,tip=[at[0]+Math.cos(angle)*petiole,at[1]+petiole*petioleRise(k,axis),at[2]+Math.sin(angle)*petiole];
     tube([at,tip],h*.0009*Math.max(.2,dev.size),c.stem,0,SURFACE.STEM,{development:dev});
-    blade(tip,h*.13,h*(p.species==='olive'?.022:.055),angle,false,axis*100+k*2+pair,{development:dev});
+    blade(tip,h*(p.species==='coffee'?.17:p.species==='tea'?.12:.13),h*(p.species==='olive'?.022:p.species==='coffee'?.075:.055),angle,false,axis*100+k*2+pair,{development:dev});
    }
    apex(end,h*.030*Math.max(.3,node.dev.size),axis,'bud');
    if(reproductive&&p.species!=='tea'){
@@ -173,44 +213,62 @@ export function regionalPlant(s,seed,detail=false,roots=false){
  tube([[0,0,0],...nodes.map(node=>stem(node.t)),stem(1)],grass?.003:kind==='palmate'?.012:.005,c.stem,0,surfaceStem,{axis:0});
  if(!terminal)apex(stem(1),h*(grass?.12:.075),0,d.dormant?'dormant-bud':grass?'rolled-whorl':'bud');
  if(d.dormant&&!grass)return finish();
+ function emitNodes(nodes,stem,h,axis=0){
  for(const [i,node] of nodes.entries())for(const [pair,a] of node.angles.entries()){
-  const {t,dev}=node,at=stem(t),identity=i*100+pair*40;
+  const {t,dev}=node,at=stem(t),identity=axis*10000+i*100+pair*40;
   if(kind==='palmate'){
-   const L=h*.16*dev.petioleFactor,end=[at[0]+Math.cos(a)*L,h*t+L*.25,Math.sin(a)*L];tube([at,end],.003*Math.max(.15,dev.size),c.stem,0,SURFACE.STEM,{development:dev});
+   const L=h*.16*dev.petioleFactor,end=[at[0]+Math.cos(a)*L,at[1]+L*petioleRise(i),at[2]+Math.sin(a)*L];tube([at,end],.003*Math.max(.15,dev.size),c.stem,0,SURFACE.STEM,{development:dev});
    for(let j=0;j<7;j++)blade(end,h*.18*(.70+.30*Math.sin(Math.PI*(j+1)/8)),h*.027,a+(j-3)*.55,false,identity+j,{development:dev});
   }else if(kind==='potato'||kind==='legume'||kind==='groundlegume'){
-   const baseL=h*(kind==='groundlegume'?.6:.28),L=baseL*dev.petioleFactor,end=[at[0]+Math.cos(a)*L,h*t+L*.18,Math.sin(a)*L];tube([at,end],.0015*Math.max(.15,dev.size),c.stem,0,SURFACE.STEM,{development:dev});
-   const pairs=['pea','lentil','chickpea','faba','potato'].includes(p.species)?p.species==='faba'?2:p.species==='potato'?3:4:p.species==='peanut'?2:1;
-   for(let j=0;j<pairs;j++)for(const side of [-1,1])blade(end.map((v,k)=>at[k]+(v-at[k])*(.35+j/pairs*.55)),baseL*.65*(.75+.25*Math.sin(Math.PI*(j+1)/(pairs+1))),baseL*(pairs>1?.16:.34),a+side*1.1,false,identity+j*2+(side+1)/2,{development:dev});
-   if(p.species==='pea'){const points=[];for(let k=0;k<18;k++){const t=k/17;points.push([end[0]+Math.cos(a)*L*.45*t+Math.sin(t*12)*.006,end[1]+L*.12*t,end[2]+Math.sin(a)*L*.45*t+Math.cos(t*12)*.006]);}tube(points,.0006,c.leaf,6);}
-   else if(!['faba','peanut'].includes(p.species))blade(end,baseL*.75,baseL*.36,a,false,identity+20,{development:dev});
+   const baseL=h*(kind==='groundlegume'?.6:.28),L=baseL*dev.petioleFactor,end=[at[0]+Math.cos(a)*L,at[1]+L*petioleRise(i),at[2]+Math.sin(a)*L],rachis=stalkCurve([at,end]);tube(rachis,.0015*Math.max(.15,dev.size),c.stem,0,SURFACE.STEM,{development:dev});
+   const pairs=['pea','lentil','chickpea','faba','potato'].includes(p.species)?p.species==='faba'?2:['pea','potato'].includes(p.species)?3:p.species==='chickpea'?6:4:p.species==='peanut'?2:1;
+   const leafletLength={pea:.36,faba:.35,chickpea:.16,lentil:.18}[p.species]??.65,leafletWidth={pea:.24,faba:.18,chickpea:.08,lentil:.09}[p.species]??(pairs>1?.16:.34);
+   for(let j=0;j<pairs;j++)for(const side of [-1,1])blade(stalkPoint(rachis,.35+j/pairs*.55),baseL*leafletLength*(.75+.25*Math.sin(Math.PI*(j+1)/(pairs+1))),baseL*leafletWidth,a+side*1.1,false,identity+j*2+(side+1)/2,{development:dev});
+   if(['pea','lentil'].includes(p.species)){const points=[];for(let k=0;k<18;k++){const t=k/17;points.push([end[0]+Math.cos(a)*L*.45*t+Math.sin(t*12)*.006,end[1]+L*.12*t,end[2]+Math.sin(a)*L*.45*t+Math.cos(t*12)*.006]);}tube(points,.0006,c.leaf,6);}
+   else if(!['faba','peanut'].includes(p.species))blade(end,baseL*(p.species==='chickpea'?.18:.75),baseL*(p.species==='chickpea'?.09:.36),a,false,identity+20,{development:dev});
    if(reproductive&&kind==='legume'&&i>1){const len=['cowpea','bean','mung','adzuki'].includes(p.species)?h*.19:h*.075;const at=[end[0],end[1]-len*.5-.008,end[2]];ball(at,[h*(p.species==='chickpea'?.025:.014),len*.5,h*.012],s.maturity>.75?'#b5a16d':'#759448',2,{supportAt:end});}
   }else {
-   const petiole=grass?0:h*.055*dev.petioleFactor,end=[at[0]+Math.cos(a)*petiole,at[1]+petiole*.35,at[2]+Math.sin(a)*petiole];
+   const petiole=grass?0:h*.055*dev.petioleFactor,end=[at[0]+Math.cos(a)*petiole,at[1]+petiole*petioleRise(i),at[2]+at[2]+Math.sin(a)*petiole];
    if(petiole)tube([at,end],.0015*Math.max(.15,dev.size),c.stem,0,SURFACE.STEM,{development:dev});
    blade(end,h*(grass?.34:.32),h*(grass?.018:kind==='flax'?.025:.13),a,grass,identity,{development:dev});
   }
   if(grass&&detail){ball(at,[.0045,.0025,.0045],c.node,0,{surface:SURFACE.STEM});tube([[at[0],at[1]-h*.08,at[2]],at],.0032,c.leaf,1,SURFACE.GRASS);}
   if(kind==='cane')ball(at,[.013,.008,.013],'#9ba568',0);
-  if(reproductive&&kind==='capsule'&&i>1){const fruitAt=[at[0]+Math.cos(a)*.028,at[1]+.035,at[2]+Math.sin(a)*.028];tube([at,fruitAt],.001,c.stem,0,SURFACE.STEM);ball(fruitAt,[.012,p.species==='okra'?.08:.025,.012],s.maturity>.75?'#b49d64':'#70944c',2,{yaw:a,tilt:.12+dev.relativeAge*.15});}
+  if(reproductive&&kind==='capsule'&&i>1){const fruitAt=[at[0]+Math.cos(a)*.028,at[1]+.035,at[2]+Math.sin(a)*.028];tube([at,fruitAt],.001,c.stem,0,SURFACE.STEM);ball(fruitAt,[.012,p.species==='okra'?.08:.025,.012],s.maturity>.75?'#b49d64':'#70944c',2,{supportAt:fruitAt,yaw:a,tilt:.12+dev.relativeAge*.15});}
   if(reproductive&&kind==='fruit'&&i>1){
-   const fruitAt=[at[0]+Math.cos(a)*.09,at[1]-.04,Math.sin(a)*.09];
+   const fruitAt=[at[0]+Math.cos(a)*.09,at[1]-.04,at[2]+Math.sin(a)*.09];
    ball(fruitAt,[.035,.065,.03],s.maturity>.65?'#c94e31':'#5a8b3e',2,{supportAt:at});
 
   }
-  if(reproductive&&kind==='cotton'&&i>2){const bollAt=[at[0]+Math.cos(a)*.10,at[1],at[2]+Math.sin(a)*.10];ball(bollAt,[.025,.03,.025],s.maturity>.6?'#eee7cf':'#7d9446',2,{supportAt:at});}
-  if(reproductive&&kind==='groundlegume'&&s.maturity<.26&&i<3){const flowerAt=[at[0]+Math.cos(a)*.025,at[1]-.008,at[2]+Math.sin(a)*.025];tube([at,flowerAt],.0007,c.stem,0,SURFACE.STEM);out.push({type:'flower',at:flowerAt,radius:.008,size:[.008,.008,.008],organ:9});}
+  if(reproductive&&kind==='cotton'&&(axis===0?i>2&&i%2===1:axis<3&&i===3)){const bollAt=[at[0]+Math.cos(a)*.10,at[1],at[2]+Math.sin(a)*.10];ball(bollAt,[.025,.03,.025],s.maturity>.6?'#eee7cf':'#7d9446',2,{supportAt:at});}
+  if(reproductive&&kind==='groundlegume'&&s.maturity<.26&&i<3){const flowerAt=[at[0]+Math.cos(a)*.025,at[1]-.008,at[2]+Math.sin(a)*.025];tube([at,flowerAt],.0007,c.stem,0,SURFACE.STEM);out.push({type:'flower',at:flowerAt,radius:.008,size:[.008,.008,.008],organ:9,supportAt:flowerAt});}
  }
+ }
+ emitNodes(nodes,stem,h);
+ // Indeterminate herbs form lateral leafy axes rather than a bare pole with
+ // eight repeated leaf templates. Branch rank controls size and local age.
+ if(!grass&&!d.dormant&&['legume','groundlegume','cotton','fruit','potato','capsule'].includes(kind)){
+  const count=['pea','lentil','faba'].includes(p.species)?2:3;
+  for(let k=0;k<count;k++){
+   const parent=nodes[k+1],base=stem(parent.t),axis=k+1,a=parent.angles[0]+.65,q=foliageVariation(s,'herb-branch',k),L=h*(.62-k*.065)*q.length,
+    branch=regionalAxis(s,p,5,{axis,first:.16,last:.98}),point=t=>[base[0]+Math.cos(a)*L*t*.62+Math.sin(a)*L*q.sweep*t*t,base[1]+L*(t*.83+.08*Math.sin(Math.PI*t)),base[2]+Math.sin(a)*L*t*.62-Math.cos(a)*L*q.sweep*t*t];
+   tube([base,...branch.map(n=>point(n.t)),point(1)],Math.min(.004,h*.0045)*q.width,c.stem,0,surfaceStem,{axis,role:'Lateral herb shoot'});
+   // Inherit the parent axis age; do not confuse leaflet rank with shoot age.
+   const grown=branch.map(n=>({...n,dev:{...n.dev,size:n.dev.size*(.75+.25*parent.dev.relativeAge),widthFactor:n.dev.widthFactor*(.85+.15*parent.dev.relativeAge)}}));
+   emitNodes(grown,point,L,axis);apex(point(1),h*.040,axis,'bud');
+  }
+ }
+
  if(reproductive){
   if(['spike','dense'].includes(kind)){
    const N=20,rows=kind==='dense'?6:p.species==='sixbarley'?6:2;
    const axis=t=>[.015+(p.species==='foxtail'?h*.12*t*t:0),h+h*.17*t-(p.species==='foxtail'?h*.14*t*t*t:0),0];
    tube(Array.from({length:9},(_,i)=>axis(i/8)),kind==='dense'?.008:.0018,c.ear,2,SURFACE.GRAIN);
    for(let j=0;j<N;j++)for(let k=0;k<rows;k++){
-    const a=k*Math.PI*2/rows+j*.18,t=j/N,taper=.5+.5*Math.sin(Math.PI*(.06+t*.88)),spread=p.species==='sorghum'?h*.045*Math.sin(Math.PI*(.06+t*.88)):.012;
-    const base=axis(t),at=[base[0]+Math.cos(a)*spread,base[1],Math.sin(a)*spread];
+    const grainPose=organVariation(s,'grain-angle',j,k),grainSize=organVariation(s,'grain-size',j,k),a=k*Math.PI*2/rows+(kind==='spike'?grainPose.angle*.40:j*.18),t=(j+(kind==='spike'?k/rows:0))/N,taper=.5+.5*Math.sin(Math.PI*(.06+t*.88)),spread=p.species==='sorghum'?h*.045*Math.sin(Math.PI*(.06+t*.88)):kind==='spike'?.0048:.012;
+    const base=axis(t),at=[base[0]+Math.cos(a)*spread,base[1]+(kind==='spike'?.005:0),base[2]+Math.sin(a)*spread];
     if(p.species==='sorghum')tube([base,at],.0007,c.ear,2,SURFACE.STEM);
-    ball(at,[kind==='dense'?.007*taper:.006,.008,kind==='dense'?.005*taper:.005],c.ear,2,{shape:'grain',yaw:a,tilt:.18+organVariation(s,'grain-angle',j,k).pitch});
+    ball(at,[(kind==='dense'?.007*taper:.006)*grainSize.width,.008*grainSize.length,(kind==='dense'?.005*taper:.005)*grainSize.depth],c.ear,2,{shape:'grain',supportAt:base,yaw:a,tilt:.18+grainPose.pitch});
     if(kind==='spike'||detail&&p.species==='pearl')tube([at,[at[0]+Math.cos(a)*.018,at[1]+(kind==='spike'?.07:.014),at[2]+Math.sin(a)*.018]],kind==='spike'?.0004:.00012,c.ear,2,SURFACE.GRAIN);
    }
   }else if(kind==='panicle'||kind==='finger'){
@@ -223,14 +281,18 @@ export function regionalPlant(s,seed,detail=false,roots=false){
      const u=(k+1)/11,axis=kind==='finger'?base.map((v,i)=>v+(end[i]-v)*u):[end[0]+k*.002,end[1]-k*.006,end[2]];
      const at=[axis[0]+(k%2?-.004:.004),axis[1]-(kind==='finger'?0:.009),axis[2]+.003];
      tube([axis,at],.00035*grainScale,c.ear,2,SURFACE.STEM);
-     ball(at,[.0035*grainScale,.007*grainScale,.0026*grainScale],c.ear,2,{shape:'grain'});
+     ball(at,[.0035*grainScale,.007*grainScale,.0026*grainScale],c.ear,2,{shape:'grain',supportAt:axis});
     }
    }
   }else if(['cluster','flax','poppy','potato'].includes(kind)){
    for(let i=0;i<(kind==='poppy'?1:6);i++){
-    const a=regionalPhyllotaxis(s,p,i,6)[0],at=i===0?[.015,h+h*.06,0]:[.015+Math.cos(a)*h*.09,h+(r()-.2)*h*.08,Math.sin(a)*h*.09];tube([[.015,h,0],at],.0018,c.stem,0,SURFACE.STEM,{terminal:'inflorescence'});
-    if(s.maturity>.72){ball(at,[kind==='poppy'?.026:.009,kind==='poppy'?.035:.013,.01],p.species==='quinoa'?'#ac6e58':'#a59660');}
-    else {const R=kind==='poppy'?.038:p.species==='potato'?.018:p.species==='tobacco'?.023:.012;out.push({type:'flower',at,radius:R,size:[R,R,R],organ:9});}
+    const a=regionalPhyllotaxis(s,p,i,6)[0],top=stem(1),at=i===0?[top[0],h+h*.12,top[2]]:[top[0]+Math.cos(a)*h*.09,h+h*(.105+r()*.045),top[2]+Math.sin(a)*h*.09],root=i===0?top:[top[0],h+h*(.020+i*.012),top[2]];
+    // A rising peduncle carries curved lateral branches; avoid flat spokes
+    // turning straight out of the culm at ninety degrees.
+    if(i===0)tube([top,[top[0],h+h*.10,top[2]]],.0019,c.stem,0,SURFACE.STEM,{terminal:'inflorescence',role:'Terminal peduncle'});
+    tube(stalkCurve([root,at]),.0015,c.stem,0,SURFACE.STEM,{terminal:'inflorescence',role:'Inflorescence branch'});
+    if(s.maturity>.72){ball(at,[kind==='poppy'?.026:.009,kind==='poppy'?.035:.013,.01],p.species==='quinoa'?'#ac6e58':'#a59660',2,{supportAt:at});}
+    else {const R=kind==='poppy'?.038:p.species==='potato'?.018:p.species==='tobacco'?.023:.012;out.push({type:'flower',at,radius:R,size:[R,R,R],organ:9,supportAt:at,flowerAxis:p.species==='potato'?[Math.cos(a)*.88,.28+organVariation(s,'flower-pitch',i).pitch,Math.sin(a)*.88]:undefined});}
    }
   }
  }

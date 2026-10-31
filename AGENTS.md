@@ -41,3 +41,35 @@
   plants and shoot tips in both WebGL and Canvas, plus the standalone HTML.
   `scripts/check-reproductive-browser.cjs` provides representative reproductive
   views and a standalone smoke test; use `--portable` for the Canvas path.
+
+- Review the reference plate and regenerate `scripts/render-natural-review.cjs`
+  contact sheets before accepting foliage changes. Inspect every preset, then
+  close-ups of representative simple, compound, grass and palm foliage. The
+  generated plate is a visual target; use botanical sources for anatomy.
+- Key variation by species, plant, parent axis, node and leaflet hand. Combine
+  shoot posture with individual pitch, roll, twist, camber, sweep and asymmetry.
+  A randomly rotated copy of an otherwise rigid compound leaf still looks tiled.
+  Preserve biological pair/whorl insertions while varying the displayed blades.
+- Model branching herbs with actual lateral shoots. Cacao needs an orthotropic
+  trunk, jorquette fan branches, distichous lateral foliage and cauliflorous pods.
+- Every reproductive source needs `supportAt` on an emitted parent axis. Extend
+  its pedicel to its transformed tissue, including grains, capsules, palms and
+  banana bunches. Test both ends; checking only that a stalk exists misses gaps.
+- Local wind bends must be scaled to blade length and expansion and pinned at
+  the insertion. Avoid a high-frequency sine along the leaf's UV length; it
+  makes small upright leaves wiggle. Pea flutter is deliberately restrained.
+- Run `node scripts/check-natural-layout.mjs` as well as the existing checks.
+  Extra branching must respect mesh budgets; retain full cotton fibre detail
+  by controlling representative boll count rather than coarsening the lint.
+
+- Cover original builders as well as regional layouts in attachment regressions.
+  The attachment check also covers original barley.
+  Winter wheat uses `wheatSpikeLayout()` in mesh and Canvas; its rachilla must
+  connect the rachis to every glume and floret at the emitted shell base.
+- Use `stalkCurve()` for flower/fruit supports and petioles, preserving attachment
+  knots. When a compound rachis curves, place its leaflets with `stalkPoint()`;
+  interpolating the old straight segment leaves them floating. Keep supports
+  independent of detail and sample sparse cluster organs from stable identities.
+- Run `node scripts/check-wheat-attachments.mjs` and
+  `node scripts/check-stalk-curves.mjs`. Browser-check `--attachments` in both
+  WebGL and portable paths; inspect junctions from multiple angles.

@@ -203,3 +203,42 @@ Copyright 2026 Hype Driven Development Inc.
 StarHermit Crops uses the **PolyForm Noncommercial License 1.0.0 with the same additional permission as StarHermit Engine**. The additional permission allows commercial use to make, distribute, and run a game built with the software while that game is published on StarHermit.com, publicly playable there, and kept in running order there. See the complete terms in [`LICENSE`](LICENSE).
 
 Third-party code retains its own licenses. Three.js and OrbitControls are MIT licensed; see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`licenses/three.js-MIT.txt`](licenses/three.js-MIT.txt).
+
+### Natural distribution and attachment review
+
+Foliage now combines species-specific seeded shoot posture with individual blade
+pitch, roll, twist, camber, sweep and asymmetry. Pairs keep their botanical
+insertions but their blades have separate geometry. Branching herbs have lateral
+leafy axes. Cacao uses a five-branch jorquette with secondary fan branches,
+drooping flush leaves and pods on its older trunk. Grain spikelets, capsules,
+palm fruits and banana hands have explicit connections to their parent axes.
+Potato corollas spread outward around the terminal cluster. Pea flutter is reduced;
+local leaf motion scales with blade length and development and stays pinned at
+its insertion.
+
+The [generated crop target plate](references/crop-realism-targets.png) was made
+with built-in imagegen; its complete prompt is saved in
+[the prompt record](references/generation-prompt.json). It guides visual review,
+not anatomical measurements. The [procedural contact sheets](references/procedural-review/collection-01.png)
+and `audit.json` in that directory cover all 80 presets. Regenerate them with
+`node scripts/render-natural-review.cjs` while the local server is running;
+`PLAYWRIGHT_MODULE`, `CHROME_PATH`, `REVIEW_URL` and `REVIEW_DIR` override tooling.
+`node scripts/check-natural-layout.mjs` checks normalized blade geometry and
+connections across 420 seeded layouts, including both ends of reproductive supports.
+
+Reference principles: [leaf angle and display architecture](https://doi.org/10.1046/j.1469-8137.2003.00765.x),
+[compound-leaf curvature](https://pmc.ncbi.nlm.nih.gov/articles/PMC7586739/),
+[cacao branch dimorphism and flowering](https://link.springer.com/article/10.1186/s12870-021-02982-y),
+[World Agroforestry cacao profile](https://apps.worldagroforestry.org/treedb2/speciesprofile.php?Spid=1641),
+and [potato floral description](https://www.nparks.gov.sg/florafaunaweb/flora/6/4/6493).
+Angular spreads and growth factors are representative modelling choices.
+
+Winter-wheat attachment and stalk follow-up: `wheatSpikeLayout()` now supplies
+both mesh and Canvas with a continuous rachis, short rachillae and supports that
+meet each glume/floret's actual base. Curved petioles and flower/fruit stalks use
+shared, fixed-sampling support paths; leaflets attach along the curved rachis.
+Terminal clusters rise from a peduncle instead of flat, right-angle spokes.
+Sparse cluster samples retain the same positions when detail increases.
+Validate with `scripts/check-wheat-attachments.mjs`, `scripts/check-stalk-curves.mjs`
+and `scripts/check-reproductive-browser.cjs --attachments` (also `--portable`).
+Close-up review images are saved in `references/attachment-review/`.

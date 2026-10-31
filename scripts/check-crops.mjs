@@ -165,3 +165,12 @@ const soySurface=createPlantGeometry({crop:'soybean',season:'summer',maturity:.6
 console.log('Passed material categories, specimen/field detail separation, stable leaves, mesh budgets, closed blade tips, pod ends, and organ-following inspection views.');
 
 const projected=portablePoint([1,2,3]);assert(Math.abs(projected[0]-2.05)<1e-10&&Math.abs(projected[1]+1.64)<1e-10,'Portable organs, labels and camera targets share a projection');
+
+// Rolling/folding a broad blade must not splay its acute tip into a wedge.
+for(const detail of [false,true]){
+ const g=createPlantGeometry({crop:'sunflower',season:'summer',maturity:.65,seed:1847},1847,detail),organ=g.attributes.organ.array,uv=g.attributes.uv.array,p=g.attributes.position.array;
+ const start=organ.findIndex(v=>v===6),rows=detail?64:8,columns=detail?8:2,tip=start+rows*(columns+1),point=i=>Array.from(p.slice(i*3,i*3+3));
+ assert(start>=0);for(let j=0;j<=columns;j++)assert(Math.hypot(...point(tip+j).map((v,k)=>v-point(tip)[k]))<1e-8,'Broad leaf tip must remain convergent after roll and folding');
+ const f=g.attributes.leafMotion;assert(f&&f.count===g.attributes.position.count);assert(Array.from(f.array).every(x=>x>=0&&x<=1));assert.equal(f.array[start],0,'Local flutter must leave the petiole insertion pinned');g.dispose();
+}
+console.log('Broad-blade tip convergence and pinned, length-scaled leaf motion passed.');

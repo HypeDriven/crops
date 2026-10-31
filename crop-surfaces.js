@@ -23,15 +23,15 @@ export function regionalLeafLocal(o,t,v){
  if(shape==='ruffled')envelope*=1+.08*Math.sin(t*Math.PI*18);
  const lateral=v*W*.5*envelope*(1+(dev.asymmetry||0)*v),offset=shape==='peltate'?.21:0;
  const droop=dev.droop??(.08+(dev.relativeAge||0)*.10);
- let axial=L*(t-offset),rise=L*(.14*Math.sin(Math.PI*t)-droop*t*t+(dev.pitch||0)*t);
- if(shape==='peltate')rise-=L*(.14*Math.sin(Math.PI*offset)-droop*offset*offset+(dev.pitch||0)*offset);
+ let axial=L*(t-offset),rise=L*((dev.camber??.14)*Math.sin(Math.PI*t)-droop*t*t+(dev.pitch||0)*t);
+ if(shape==='peltate')rise-=L*((dev.camber??.14)*Math.sin(Math.PI*offset)-droop*offset*offset+(dev.pitch||0)*offset);
  if(shape==='cordate')axial-=L*.12*Math.pow(1-t,8)*Math.pow(Math.abs(v),1.3);
  rise+=Math.abs(v)*W*(.025+(dev.fold||0)*.32)*envelope+(dev.twist||0)*lateral*t;
  if(shape==='ruffled')rise+=Math.pow(Math.abs(v),3)*W*.08*Math.sin(t*Math.PI*22);
  if(shape==='banana')rise+=Math.pow(Math.abs(v),2)*W*.045*Math.sin(t*Math.PI*12);
  // Rotate the whole surface, including its veins and peltate insertion, in a
  // local frame. Young blades stand up; older blades spread and droop.
- const roll=dev.roll||0,elevation=dev.elevation||0,y=rise*Math.cos(roll)-lateral*Math.sin(roll),z=rise*Math.sin(roll)+lateral*Math.cos(roll);
+ const roll=dev.roll||0,elevation=dev.elevation||0,y=rise*Math.cos(roll)-lateral*Math.sin(roll),z=rise*Math.sin(roll)+lateral*Math.cos(roll)+L*(dev.sweep||0)*(t-offset)**2;
  return [axial*Math.cos(elevation)-y*Math.sin(elevation),axial*Math.sin(elevation)+y*Math.cos(elevation),z];
 }
 export function regionalLeafPoint(o,t,v){const [x,y,z]=regionalLeafLocal(o,t,v),a=o.angle;return[o.at[0]+Math.cos(a)*x-Math.sin(a)*z,o.at[1]+y,o.at[2]+Math.sin(a)*x+Math.cos(a)*z];}
@@ -73,6 +73,35 @@ export function regionalCorollaPoint(o,t,a){
  const lobes=(.72+.28*Math.cos(a*(o.lobes||5))),mouth=(o.tubeRadius+(o.radius-o.tubeRadius)*Math.pow(t,o.flare??2.7))*(1-Math.pow(t,12)*(1-lobes));
  const ripple=(o.wrinkle||0)*Math.sin(a*27+t*35)*Math.pow(t,3),r=mouth*(1+ripple),height=o.length*t+(o.radius*.16*Math.cos(a*(o.lobes||5)))*Math.pow(t,8);
  return o.at.map((p,k)=>p+o.axis[k]*height+o.side[k]*Math.cos(a)*r+o.normal[k]*Math.sin(a)*r);
+}
+
+// Smooth support paths preserve every supplied attachment knot. Sampling is
+// fixed in biological layout space, independent of mesh/Canvas detail.
+export function stalkPoint(points,t){
+ const f=Math.max(0,Math.min(1,t))*(points.length-1),i=Math.min(points.length-2,Math.floor(f));
+ return points[i].map((v,k)=>v+(points[i+1][k]-v)*(f-i));
+}
+export function stalkCurve(points,{startDirection,endDirection,steps=6}={}){
+ if(points.length<2)return points.map(p=>[...p]);
+ const sub=(a,b)=>a.map((v,k)=>v-b[k]),length=a=>Math.hypot(...a),unit=a=>{const L=length(a)||1;return a.map(v=>v/L);};
+ const tangent=i=>{
+  if(i===0&&startDirection)return unit(startDirection);
+  if(i===points.length-1&&endDirection)return unit(endDirection);
+  if(i===0){const d=sub(points[1],points[0]),L=length(d);return unit([d[0],d[1]+L*.60,d[2]]);}
+  if(i===points.length-1){const d=sub(points[i],points[i-1]),L=length(d);return unit([d[0],d[1]-L*.20,d[2]]);}
+  const a=unit(sub(points[i],points[i-1])),b=unit(sub(points[i+1],points[i]));return unit(a.map((v,k)=>v+b[k]));
+ };
+ if(points.every(p=>length(sub(p,points[0]))<1e-12))return points.map(p=>[...p]);
+ const out=[[...points[0]]];
+ for(let i=0;i<points.length-1;i++){
+  const a=points[i],b=points[i+1],L=length(sub(b,a)),u=tangent(i),v=tangent(i+1);
+  for(let j=1;j<=steps;j++){
+   if(j===steps){out.push([...b]);continue;}
+   const t=j/steps,t2=t*t,t3=t2*t;
+   out.push(a.map((p,k)=>(2*t3-3*t2+1)*p+(-2*t3+3*t2)*b[k]+(t3-2*t2+t)*u[k]*L*.72+(t3-t2)*v[k]*L*.72));
+  }
+ }
+ return out;
 }
 
 export function portablePoint(p,scale=1){return [(p[0]+p[2]*.35)*scale,(-p[1]+p[2]*.12)*scale];}

@@ -3,7 +3,7 @@ Required Notice: Copyright 2026 Hype Driven Development Inc. (https://hypedriven
 PolyForm Noncommercial 1.0.0 with additional permission; see LICENSE.
 */
 import {seeded,organVariation,mixHex} from './crops.js';
-import {SURFACE,regionalBodyPoint,regionalFramePoint,regionalPatchPoint,regionalCorollaPoint} from './crop-surfaces.js';
+import {SURFACE,regionalBodyPoint,regionalFramePoint,regionalPatchPoint,regionalCorollaPoint,stalkCurve} from './crop-surfaces.js';
 
 const add=(a,b)=>a.map((v,k)=>v+b[k]),sub=(a,b)=>a.map((v,k)=>v-b[k]),mul=(a,s)=>a.map(v=>v*s),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>mul(a,1/(Math.hypot(...a)||1)),clamp=x=>Math.max(0,Math.min(1,x));
 const frame=axis=>{const side=norm(cross(axis,Math.abs(axis[1])>.9?[0,0,1]:[0,1,0]));return {axis,side,normal:norm(cross(side,axis))};};
@@ -36,7 +36,10 @@ export function remasterReproductive(s,p,layout,detail){
   let siteRadius=R*1.40,first=true;
   const emit=o=>{out.push({reproductive:true,siteId,siteCenter,siteRadius,supportAt:source.supportAt,primary:first,...o});first=false;return out.at(-1);};
   const ball=(at,size,color,organ=2,extra={})=>emit({type:'ball',at,size,color,organ,surface:organ===9?SURFACE.PETAL:SURFACE.FRUIT,shape:'round',yaw:0,tilt:0,roll:0,...extra});
-  const tube=(points,radius,color,organ=2,surface=SURFACE.STEM,extra={})=>emit({type:'tube',points,radii:points.map((_,i)=>radius*(1-i/(points.length-1)*.72)),color,organ,surface,...extra});
+  const tube=(points,radius,color,organ=2,surface=SURFACE.STEM,extra={})=>{
+   if(/pedicel|attachment/i.test(extra.role||''))points=stalkCurve(points,{endDirection:extra.endDirection});
+   return emit({type:'tube',points,radii:points.map((_,i)=>radius*(1-i/(points.length-1)*.72)),color,organ,surface,...extra});
+  };
   const patch=(at,axis,normal,length,width,color,extra={})=>emit({type:'patch',at,axis:norm(axis),normal:norm(normal),side:norm(cross(axis,normal)),length,width,color,baseColor:color,organ:9,surface:SURFACE.PETAL,shape:'petal',cup:.16,...extra});
   const stage=clamp(s.maturity??.65),heading=source.yaw??r()*Math.PI*2,axis=norm([Math.cos(heading)*.70,.55,Math.sin(heading)*.70]);
   const body={...source,reproductive:true,siteId,siteCenter,siteRadius,primary:true,seed:q.seed};
@@ -56,14 +59,14 @@ export function remasterReproductive(s,p,layout,detail){
    for(let k=0;k<N;k++){
     const index=Math.floor(k*count/N),random=seeded(q.seed+index*719+Math.round(center[1]*1e7)),a=index*Math.PI*2/count,dir=add(mul(f.side,Math.cos(a)),mul(f.normal,Math.sin(a))),base=add(center,mul(dir,radius)),tip=add(add(base,mul(n,length*(cone?.14:.90+random()*.15))),mul(dir,cone?-radius*.55:radius*.35));
     if(detail)tube([base,add(base,mul(n,length*(cone?.07:.55))),tip],Math.max(.000055,radius*.035),'#e0c997',9,SURFACE.PETAL,{role:'Filament'});
-    for(const side of detail?[-1,1]:[0])ball(add(add(tip,mul(f.side,side*radius*.075)),mul(n,cone?length*.25:0)),[Math.max(.00016,radius*.12),Math.max(.0003,length*(cone?.25:.19)),Math.max(.00012,radius*.08)],color,9,{role:'Anther theca',axis:n,yaw:heading+Math.PI,tilt:Math.acos(Math.min(1,n[1]))});
+    for(const side of detail?[-1,1]:[0])ball(add(add(tip,mul(f.side,side*radius*.075)),mul(n,cone?length*.25:0)),[Math.max(.00016,radius*.12),Math.max(.0003,length*(cone?.25:.19)),Math.max(.00012,radius*.08)],color,9,{role:'Anther theca',axis:n,yaw:Math.atan2(n[2],n[0])+Math.PI,tilt:Math.acos(Math.min(1,n[1]))});
    }
   }
-  function flower(center,radius,species=p.species,n=axis){
+  function flower(center,radius,species=p.species,n=source.flowerAxis?norm(source.flowerAxis):axis){
    siteRadius=Math.max(siteRadius,radius*1.7);const f=frame(n),legume=LEGUME_ORGANS[species],mallow=['cotton','okra'].includes(species),poppy=species==='poppy',flowerRandom=seeded(q.seed+Math.round(center.reduce((sum,v,k)=>sum+v*(k+3)*1e7,0)));
    const color=legume?.flower??({cotton:'#eedf9c',okra:'#e9d389',flax:'#8eace1',poppy:'#d7a6c5',potato:'#c6a9d4',pepper:'#ecebd8',sesame:'#dec7de',tobacco:'#d7a0b8',perilla:'#d7c5dd',coffee:'#eae8d5',olive:'#e7e0bd',cacao:'#d5b3a6',pomegranate:'#dc6d43',jute:'#e4ca55',buckwheat:'#eadbcf',quinoa:'#a2af65'}[species]??'#d9d4b4');
-   const ovaryAt=poppy?add(center,mul(n,radius*.08)):legume?add(center,mul(f.normal,-radius*.24)):add(center,mul(n,-radius*.10)),ovary=ball(ovaryAt,[radius*(poppy?.20:.06),radius*(poppy?.25:.09),radius*(poppy?.20:.06)],'#799044',9,{surface:SURFACE.STEM,role:'Ovary',flower:species,flowerRadius:radius,flowerAxis:n,yaw:heading+Math.PI,tilt:Math.acos(Math.min(1,n[1]))});
-   if(source.supportAt)tube([source.supportAt,add(center,mul(n,-radius*.08))],Math.min(.0012,radius*.065),'#7d934b',2,SURFACE.STEM,{role:'Flower pedicel'});
+   const ovaryAt=poppy?add(center,mul(n,radius*.08)):legume?add(center,mul(f.normal,-radius*.24)):add(center,mul(n,-radius*.10)),ovary=ball(ovaryAt,[radius*(poppy?.20:.06),radius*(poppy?.25:.09),radius*(poppy?.20:.06)],'#799044',9,{surface:SURFACE.STEM,role:'Ovary',flower:species,flowerRadius:radius,flowerAxis:n,yaw:Math.atan2(n[2],n[0])+Math.PI,tilt:Math.acos(Math.min(1,n[1]))});
+   if(source.supportAt)tube([source.supportAt,add(center,mul(n,-radius*.08))],Math.min(.0012,radius*.065),'#7d934b',2,SURFACE.STEM,{role:'Flower pedicel',endDirection:n});
    calyx(add(center,mul(n,-radius*.08)),mul(n,-1),radius*.42,5);
    if(legume){
     patch(add(center,mul(n,-radius*.05)),f.normal,n,radius*1.18,radius*1.65,color,{cup:.25,arch:.14,wrinkle:.012,role:'Standard petal'});
@@ -95,7 +98,7 @@ export function remasterReproductive(s,p,layout,detail){
     for(let k=0;k<count;k++){const a=k*Math.PI*2/count,end=add(styleEnd,mul(add(mul(f.side,Math.cos(a)),mul(f.normal,Math.sin(a))),radius*(free?.12:.055)));if(free)tube([styleBase,end],radius*.018,'#b7bc6c',9,SURFACE.PETAL,{role:'Style'});ball(end,[radius*.045,radius*.035,radius*.045],mallow?'#a96551':'#bdc17c',9,{role:'Stigma'});}
    }
    if(poppy){
-    const head=add(center,mul(n,radius*.28));ball(head,[radius*.25,radius*.09,radius*.25],'#91a57b',9,{yaw:heading+Math.PI,tilt:Math.acos(Math.min(1,n[1])),role:'Stigmatic disc'});
+    const head=add(center,mul(n,radius*.28));ball(head,[radius*.25,radius*.09,radius*.25],'#91a57b',9,{yaw:Math.atan2(n[2],n[0])+Math.PI,tilt:Math.acos(Math.min(1,n[1])),role:'Stigmatic disc'});
     if(detail)for(let k=0;k<9;k++){const a=k*Math.PI*2/9; tube([head,add(head,add(mul(f.side,Math.cos(a)*radius*.24),mul(f.normal,Math.sin(a)*radius*.24)))],radius*.010,'#74875e',9,SURFACE.STEM,{role:'Stigmatic ray'});}
    }
    return ovary;
@@ -195,19 +198,23 @@ export function remasterReproductive(s,p,layout,detail){
 
   function grain(){
    const parent=emit({...body,shape:'grain',crease:.13,role:'Caryopsis and hull',surface:SURFACE.GRAIN});
-   if(!detail)return;
    const n=norm(sub(regionalBodyPoint(parent,1,0),regionalBodyPoint(parent,0,0))),f=frame(n),base=regionalBodyPoint(parent,0,0);
+   if(source.supportAt)tube([source.supportAt,base],Math.min(.0012,size[0]*.18),parent.color,2,SURFACE.STEM,{role:'Spikelet attachment'});
+   if(!detail)return;
    for(const side of [-1,1])patch(add(base,mul(f.side,side*size[0]*.10)),n,mul(f.side,side),size[1]*1.9,size[0]*1.50,mixHex(parent.color,'#c7b180',.20),{surface:SURFACE.GRAIN,organ:2,shape:'glume',cup:.08,fold:.24,role:side===1?'Lemma':'Palea'});
    if(stage<.28)for(let k=0;k<3;k++){
     const a=k*Math.PI*2/3,base=regionalBodyPoint(parent,.55,a),tip=add(base,[Math.cos(a)*.004,-.006,Math.sin(a)*.004]);tube([base,tip],.00007,'#d2c7a1',2,SURFACE.GRAIN,{role:'Exserted filament'});ball(tip,[.0005,.0017,.0004],'#ba9a42',2,{surface:SURFACE.GRAIN,role:'Cereal anther'});
    }
   }
 
+  // Connect source supports to a point inside the emitted body, not to an
+  // assumed pole of an unrotated proxy. Overlap avoids precision seams.
+  if(source.supportAt&&source.type==='ball'&&['capsule','cluster','flax','poppy','potato'].includes(p.model))tube([source.supportAt,source.at],Math.min(.0015,R*.10),'#7c9050',2,SURFACE.STEM,{role:'Reproductive attachment'});
   if(source.type==='flower'){
    if(['quinoa','buckwheat','perilla'].includes(p.species)){
-    const count=detail?(p.species==='quinoa'?28:9):1,cluster=source.radius??R;
+    const total=p.species==='quinoa'?28:9,count=detail?total:1,cluster=source.radius??R;
     for(let k=0;k<count;k++){
-     const a=k*2.399963,t=(k+.5)/count,z=1-2*t,spread=cluster*Math.sqrt(1-z*z),at=add(source.at,[Math.cos(a)*spread,z*cluster*.65,Math.sin(a)*spread]);
+     const sample=detail?k:Math.floor((k+.5)*total/count),a=sample*2.399963,t=(sample+.5)/total,z=1-2*t,spread=cluster*Math.sqrt(1-z*z),at=add(source.at,[Math.cos(a)*spread,z*cluster*.65,Math.sin(a)*spread]);
      flower(at,cluster*(p.species==='quinoa'?.19:.35),p.species,norm([Math.cos(a)*.65,.7,Math.sin(a)*.65]));
     }
    }else flower(source.at,source.radius??R,p.species);
@@ -223,9 +230,10 @@ export function remasterReproductive(s,p,layout,detail){
   }else if(p.species==='flax'||p.species==='tobacco'){
    const parent=emit({...body,shape:'capsule',ribs:.055,ribCount:p.species==='flax'?5:2,role:p.species==='flax'?'Ten-chamber flax capsule':'Tobacco capsule',surface:SURFACE.POD});calyx(regionalBodyPoint(parent,0,0),[0,-1,0],R*.65,5);
   }else if(['quinoa','buckwheat','perilla'].includes(p.species)){
-   const count=detail?32:5;
+   const total=32,count=detail?total:5;
    for(let k=0;k<count;k++){
-    const a=k*2.399963,z=1-2*(k+.5)/count,spread=R*.80*Math.sqrt(1-z*z),at=add(source.at,[Math.cos(a)*spread,z*R*.65,Math.sin(a)*spread]),parent=ball(at,[R*.18,R*.23,R*.16],p.species==='quinoa'?'#ab795a':'#a09165',2,{shape:'capsule',ribs:p.species==='buckwheat'?.18:.03,ribCount:p.species==='buckwheat'?3:4,surface:SURFACE.GRAIN,role:p.species==='buckwheat'?'Three-angled achene':p.species==='perilla'?'Nutlet':'Seed with persistent perianth'});
+    const sample=detail?k:Math.floor((k+.5)*total/count),a=sample*2.399963,z=1-2*(sample+.5)/total,spread=R*.80*Math.sqrt(1-z*z),at=add(source.at,[Math.cos(a)*spread,z*R*.65,Math.sin(a)*spread]),parent=ball(at,[R*.18,R*.23,R*.16],p.species==='quinoa'?'#ab795a':'#a09165',2,{shape:'capsule',ribs:p.species==='buckwheat'?.18:.03,ribCount:p.species==='buckwheat'?3:4,surface:SURFACE.GRAIN,role:p.species==='buckwheat'?'Three-angled achene':p.species==='perilla'?'Nutlet':'Seed with persistent perianth'});
+    tube([source.at,regionalBodyPoint(parent,0,0)],Math.min(.00045,R*.04),'#8f9769',2,SURFACE.STEM,{role:'Cluster pedicel'});
     if(detail)calyx(regionalBodyPoint(parent,0,0),[0,-1,0],R*.17,p.species==='perilla'?4:5,'#909359');
    }
   }else if(p.species==='potato'){

@@ -1,0 +1,322 @@
+[
+  {
+    "type": "wheat",
+    "vertices": 4772
+  },
+  {
+    "type": "barley",
+    "vertices": 6084
+  },
+  {
+    "type": "maize",
+    "vertices": 8849
+  },
+  {
+    "type": "sunflower",
+    "vertices": 9011
+  },
+  {
+    "type": "soybean",
+    "vertices": 15159
+  },
+  {
+    "type": "r01-spelt",
+    "vertices": 2532
+  },
+  {
+    "type": "r01-beet",
+    "vertices": 1222
+  },
+  {
+    "type": "r01-flax",
+    "vertices": 4088
+  },
+  {
+    "type": "r02-barley",
+    "vertices": 6084
+  },
+  {
+    "type": "r02-faba",
+    "vertices": 8637
+  },
+  {
+    "type": "r02-pea",
+    "vertices": 11949
+  },
+  {
+    "type": "r03-rye",
+    "vertices": 2532
+  },
+  {
+    "type": "r03-buckwheat",
+    "vertices": 3632
+  },
+  {
+    "type": "r03-poppy",
+    "vertices": 1121
+  },
+  {
+    "type": "r04-oat",
+    "vertices": 3226
+  },
+  {
+    "type": "r04-swede",
+    "vertices": 1222
+  },
+  {
+    "type": "r04-sixbarley",
+    "vertices": 6676
+  },
+  {
+    "type": "r05-einkorn",
+    "vertices": 2532
+  },
+  {
+    "type": "r05-emmer",
+    "vertices": 2532
+  },
+  {
+    "type": "r05-potato",
+    "vertices": 12782
+  },
+  {
+    "type": "r06-durum",
+    "vertices": 2532
+  },
+  {
+    "type": "r06-chickpea",
+    "vertices": 22318
+  },
+  {
+    "type": "r06-olive",
+    "vertices": 22897
+  },
+  {
+    "type": "r07-pepper",
+    "vertices": 5608
+  },
+  {
+    "type": "r07-tobacco",
+    "vertices": 3260
+  },
+  {
+    "type": "r07-lentil",
+    "vertices": 13901
+  },
+  {
+    "type": "r08-sunflower",
+    "vertices": 9011
+  },
+  {
+    "type": "r08-proso",
+    "vertices": 3226
+  },
+  {
+    "type": "r08-springwheat",
+    "vertices": 2532
+  },
+  {
+    "type": "r09-potato",
+    "vertices": 12782
+  },
+  {
+    "type": "r09-turnip",
+    "vertices": 1222
+  },
+  {
+    "type": "r09-kale",
+    "vertices": 1222
+  },
+  {
+    "type": "r10-chickpea",
+    "vertices": 22318
+  },
+  {
+    "type": "r10-lentil",
+    "vertices": 13901
+  },
+  {
+    "type": "r10-sesame",
+    "vertices": 7390
+  },
+  {
+    "type": "r11-date",
+    "vertices": 16138
+  },
+  {
+    "type": "r11-rice",
+    "vertices": 3226
+  },
+  {
+    "type": "r11-okra",
+    "vertices": 5440
+  },
+  {
+    "type": "r12-nakedbarley",
+    "vertices": 2532
+  },
+  {
+    "type": "r12-buckwheat",
+    "vertices": 3632
+  },
+  {
+    "type": "r12-pomegranate",
+    "vertices": 23191
+  },
+  {
+    "type": "r13-durum",
+    "vertices": 2532
+  },
+  {
+    "type": "r13-faba",
+    "vertices": 8637
+  },
+  {
+    "type": "r13-cotton",
+    "vertices": 9625
+  },
+  {
+    "type": "r14-pearl",
+    "vertices": 4996
+  },
+  {
+    "type": "r14-sorghum",
+    "vertices": 6196
+  },
+  {
+    "type": "r14-cowpea",
+    "vertices": 9696
+  },
+  {
+    "type": "r15-teff",
+    "vertices": 3226
+  },
+  {
+    "type": "r15-finger",
+    "vertices": 2848
+  },
+  {
+    "type": "r15-coffee",
+    "vertices": 22897
+  },
+  {
+    "type": "r16-cassava",
+    "vertices": 3571
+  },
+  {
+    "type": "r16-yam",
+    "vertices": 2315
+  },
+  {
+    "type": "r16-oilpalm",
+    "vertices": 16138
+  },
+  {
+    "type": "r17-maize",
+    "vertices": 8849
+  },
+  {
+    "type": "r17-bambara",
+    "vertices": 5393
+  },
+  {
+    "type": "r17-peanut",
+    "vertices": 6658
+  },
+  {
+    "type": "r18-rice",
+    "vertices": 3226
+  },
+  {
+    "type": "r18-pigeon",
+    "vertices": 9710
+  },
+  {
+    "type": "r18-jute",
+    "vertices": 5440
+  },
+  {
+    "type": "r19-rice",
+    "vertices": 3226
+  },
+  {
+    "type": "r19-adzuki",
+    "vertices": 9668
+  },
+  {
+    "type": "r19-perilla",
+    "vertices": 3940
+  },
+  {
+    "type": "r20-foxtail",
+    "vertices": 4996
+  },
+  {
+    "type": "r20-soybean",
+    "vertices": 15159
+  },
+  {
+    "type": "r20-tea",
+    "vertices": 6125
+  },
+  {
+    "type": "r21-rice",
+    "vertices": 3226
+  },
+  {
+    "type": "r21-buckwheat",
+    "vertices": 3632
+  },
+  {
+    "type": "r21-daikon",
+    "vertices": 1222
+  },
+  {
+    "type": "r22-rice",
+    "vertices": 3226
+  },
+  {
+    "type": "r22-mung",
+    "vertices": 9668
+  },
+  {
+    "type": "r22-cane",
+    "vertices": 658
+  },
+  {
+    "type": "r23-taro",
+    "vertices": 868
+  },
+  {
+    "type": "r23-banana",
+    "vertices": 5244
+  },
+  {
+    "type": "r23-coconut",
+    "vertices": 13852
+  },
+  {
+    "type": "r24-maize",
+    "vertices": 8849
+  },
+  {
+    "type": "r24-bean",
+    "vertices": 9696
+  },
+  {
+    "type": "r24-cacao",
+    "vertices": 9835
+  },
+  {
+    "type": "r25-quinoa",
+    "vertices": 3176
+  },
+  {
+    "type": "r25-potato",
+    "vertices": 12782
+  },
+  {
+    "type": "r25-peanut",
+    "vertices": 6658
+  }
+]

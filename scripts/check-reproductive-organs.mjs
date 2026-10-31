@@ -23,7 +23,7 @@ for(const p of shared)for(const maturity of [.14,.65,.90]){
  }
  for(const site of sites){
   assert(site.siteCenter.every(Number.isFinite)&&site.siteRadius>0);const children=close.filter(o=>o.siteId===site.siteId);assert(children.length);
-  if(site.supportAt){const stalk=children.find(o=>['Flower pedicel','Pod pedicel','Fruit pedicel','Boll pedicel'].includes(o.role));assert(stalk,p.id+' attached reproductive stalk');assert.deepEqual(stalk.points[0],site.supportAt,p.id+' stalk starts at its parent');}
+  if(site.supportAt){const stalk=children.find(o=>['Flower pedicel','Pod pedicel','Fruit pedicel','Boll pedicel','Spikelet attachment','Reproductive attachment'].includes(o.role));assert(stalk,p.id+' attached reproductive stalk');assert.deepEqual(stalk.points[0],site.supportAt,p.id+' stalk starts at its parent');}
  }
  if(sites.length){const view=regionalStudy(s,'ear');assert(view&&view.target.every(Number.isFinite)&&view.span>0);assert(view.labels.length>=1);if(view.cameraDirection)assert(Math.abs(Math.hypot(...view.cameraDirection)-1)<1e-10,'Flower close-ups face the corolla');}
 }
