@@ -17,6 +17,11 @@ sources = {
     key: base64.b64encode((ROOT / path).read_bytes()).decode('ascii')
     for key, path in {
         'three': 'vendor/three.module.js',
+        'surfaces': 'crop-surfaces.js',
+        'material': 'plant-material.js',
+        'regional': 'regional-crops.js',
+        'plants': 'regional-plants.js',
+        'reproduction': 'reproductive-organs.js',
         'data': 'crops.js',
         'orbit': 'vendor/OrbitControls.js',
         'model': 'crop-model.js',
@@ -31,12 +36,17 @@ const data=PAYLOAD;
 const decode=x=>new TextDecoder().decode(Uint8Array.from(atob(x),c=>c.charCodeAt(0)));
 const moduleURL=x=>URL.createObjectURL(new Blob([x],{type:'text/javascript'}));
 const three=moduleURL(decode(data.three));
-const cropdata=moduleURL(decode(data.data));
+const surfaces=moduleURL(decode(data.surfaces));
+const material=moduleURL(decode(data.material).replace("'./crop-surfaces.js'",JSON.stringify(surfaces)).replace("'./vendor/three.module.js'",JSON.stringify(three)));
+const regional=moduleURL(decode(data.regional));
+const cropdata=moduleURL(decode(data.data).replaceAll("'./regional-crops.js'",JSON.stringify(regional)));
+const reproduction=moduleURL(decode(data.reproduction).replace("'./crop-surfaces.js'",JSON.stringify(surfaces)).replace("'./crops.js'",JSON.stringify(cropdata)));
+const plants=moduleURL(decode(data.plants).replace("'./reproductive-organs.js'",JSON.stringify(reproduction)).replace("'./crop-surfaces.js'",JSON.stringify(surfaces)).replace("'./crops.js'",JSON.stringify(cropdata)));
 const orbit=moduleURL(decode(data.orbit).replace("'./three.module.js'",JSON.stringify(three)));
-const model=moduleURL(decode(data.model).replace("'./vendor/three.module.js'",JSON.stringify(three)).replace("'./crops.js'",JSON.stringify(cropdata)));
-const canvas=moduleURL(decode(data.canvas).replace("'./crops.js'",JSON.stringify(cropdata)));
-const fallback=moduleURL(decode(data.fallback).replace("'./crops.js'",JSON.stringify(cropdata)).replace("'./crop-canvas.js'",JSON.stringify(canvas)));
-const app=decode(data.app).replace("'./vendor/three.module.js'",JSON.stringify(three)).replace("'./vendor/OrbitControls.js'",JSON.stringify(orbit)).replace("'./crops.js'",JSON.stringify(cropdata)).replace("'./crop-model.js'",JSON.stringify(model)).replace('"./fallback.js"',JSON.stringify(fallback));
+const model=moduleURL(decode(data.model).replace("'./reproductive-organs.js'",JSON.stringify(reproduction)).replace("'./crop-surfaces.js'",JSON.stringify(surfaces)).replace("'./regional-plants.js'",JSON.stringify(plants)).replace("'./vendor/three.module.js'",JSON.stringify(three)).replace("'./crops.js'",JSON.stringify(cropdata)));
+const canvas=moduleURL(decode(data.canvas).replace("'./reproductive-organs.js'",JSON.stringify(reproduction)).replace("'./crop-surfaces.js'",JSON.stringify(surfaces)).replace("'./regional-plants.js'",JSON.stringify(plants)).replace("'./crops.js'",JSON.stringify(cropdata)));
+const fallback=moduleURL(decode(data.fallback).replace("'./crop-surfaces.js'",JSON.stringify(surfaces)).replace("'./regional-plants.js'",JSON.stringify(plants)).replace("'./crops.js'",JSON.stringify(cropdata)).replace("'./crop-canvas.js'",JSON.stringify(canvas)));
+const app=decode(data.app).replace("'./regional-plants.js'",JSON.stringify(plants)).replace("'./plant-material.js'",JSON.stringify(material)).replace("'./vendor/three.module.js'",JSON.stringify(three)).replace("'./vendor/OrbitControls.js'",JSON.stringify(orbit)).replace("'./crops.js'",JSON.stringify(cropdata)).replace("'./crop-model.js'",JSON.stringify(model)).replace('"./fallback.js"',JSON.stringify(fallback));
 await import(moduleURL(app));
 })().catch(e=>{document.getElementById('loading').innerHTML='<h2>Open this file in Chrome, Edge, Firefox or Safari</h2><p>The previewer may not support interactive HTML. Download the file and open it in your browser.</p>';console.error(e);});
 </script>'''

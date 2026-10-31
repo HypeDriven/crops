@@ -5,16 +5,19 @@ https://polyformproject.org/licenses/noncommercial/1.0.0
 */
 import * as THREE from './vendor/three.module.js';
 import { cropDimensions, cropColors, profile, seeded, leafDevelopment, sunflowerHead, maizeEar, shootTermination, soybeanAxisNodes, soybeanLeafSurface, soybeanPodShape, soybeanPodSurface, sunflowerDiskLayout, organVariation, axisNodeFractions, soybeanBranches, cerealSpike, sunflowerRays, maizeKernel } from './crops.js';
+import { regionalPlant } from './regional-plants.js';
+import { regionalFibreCurve } from './reproductive-organs.js';
+import { SURFACE, organSurface, regionalLeafPoint, regionalBodyPoint,regionalPatchPoint,regionalCorollaPoint } from './crop-surfaces.js';
 const rng=seeded,V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z),col=c=>new THREE.Color(c),mix=(a,b,t)=>a.clone().lerp(b,t);
 function colors3(s){return Object.fromEntries(Object.entries(cropColors(s)).map(([k,v])=>[k,col(v)]));}
 export class Build {
- constructor(){this.p=[];this.c=[];this.u=[];this.o=[];this.idx=[];}
- vertex(p,color,u=0,v=0,organ=0){const i=this.p.length/3;this.p.push(p.x,p.y,p.z);this.c.push(color.r,color.g,color.b);this.u.push(u,v);this.o.push(organ);return i;}
+ constructor(){this.p=[];this.c=[];this.u=[];this.o=[];this.s=[];this.idx=[];this.surfaceType=null;this.surfaceMap=null;}
+ vertex(p,color,u=0,v=0,organ=0){const i=this.p.length/3;this.p.push(p.x,p.y,p.z);this.c.push(color.r,color.g,color.b);this.u.push(u,v);this.o.push(organ);this.s.push(this.surfaceType??this.surfaceMap?.[organ]??organSurface(organ));return i;}
  tri(a,b,c){this.idx.push(a,b,c);}
  tube(points,radii,color,sides=5,organ=0){let start=this.p.length/3;for(let i=0;i<points.length;i++){const d=points[Math.min(i+1,points.length-1)].clone().sub(points[Math.max(0,i-1)]).normalize();let n=V(0,0,1);if(Math.abs(d.dot(n))>.95)n=V(1,0,0);const b=new THREE.Vector3().crossVectors(d,n).normalize();n.crossVectors(b,d).normalize();for(let j=0;j<=sides;j++){const a=j/sides*Math.PI*2;this.vertex(points[i].clone().addScaledVector(n,Math.cos(a)*radii[i]).addScaledVector(b,Math.sin(a)*radii[i]),color,j/sides,i/(points.length-1),organ);}}for(let i=0;i<points.length-1;i++)for(let j=0;j<sides;j++){let a=start+i*(sides+1)+j,b=a+sides+1;this.tri(a,b,a+1);this.tri(a+1,b,b+1);}const cap0=this.vertex(points[0],color,.5,0,organ),cap1=this.vertex(points[points.length-1],color,.5,1,organ);for(let j=0;j<sides;j++){this.tri(cap0,start+j+1,start+j);let z=start+(points.length-1)*(sides+1)+j;this.tri(cap1,z,z+1);}}
  shell(center,width,length,depth,angle,color,detail=1,organ=2){const seg=detail?8:4,sides=detail?8:4;let start=this.p.length/3;for(let i=0;i<=seg;i++){let t=i/seg;let shape=Math.pow(Math.sin(Math.PI*t),.72);for(let j=0;j<=sides;j++){let a=j/sides*Math.PI*2;let x=Math.cos(a)*width*shape,z=Math.sin(a)*depth*shape;const ridge=1+.12*Math.pow(Math.max(0,Math.sin(a)),10);z*=ridge;const y=t*length;this.vertex(V(center.x+Math.cos(angle)*x+Math.sin(angle)*y*.18,center.y+y,center.z+z),color,j/sides,t,organ);}}for(let i=0;i<seg;i++)for(let j=0;j<sides;j++){let a=start+i*(sides+1)+j,b=a+sides+1;this.tri(a,a+1,b);this.tri(a+1,b+1,b);}}
  leaf(base,len,width,angle,droop,color,detail,development={}){angle+=development.angle||0;const seg=detail?30:7,cross=detail?8:2,start=this.p.length/3;const dir=V(Math.cos(angle),0,Math.sin(angle)),side=V(-Math.sin(angle),0,Math.cos(angle));for(let i=0;i<=seg;i++){let t=i/seg;let w=(i===0||i===seg)?0:width*Math.pow(Math.sin(Math.PI*Math.pow(t,.7)),.68)*(1-.26*t);const p=base.clone().addScaledVector(dir,len*t*.78);p.y+=len*(Math.sin(t*Math.PI*.8)*.56-droop*t*t);for(let j=0;j<=cross;j++){const s=j/cross*2-1;let q=p.clone().addScaledVector(side,w*s*.5);q.y+=(development.twist||0)*w*s*t+Math.abs(s)*w*(.12+(development.fold||0)*1.8)+Math.sin(t*6.5+angle)*w*s*.28;if(detail)q.y+=Math.cos(s*30)*w*.007;this.vertex(q,color,j/cross,t,1);}}for(let i=0;i<seg;i++)for(let j=0;j<cross;j++){const a=start+i*(cross+1)+j,b=a+cross+1;this.tri(a,b,a+1);this.tri(a+1,b,b+1);}}
- geometry(){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(this.p,3));g.setAttribute('color',new THREE.Float32BufferAttribute(this.c,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(this.u,2));g.setAttribute('organ',new THREE.Float32BufferAttribute(this.o,1));g.setIndex(this.idx);g.computeVertexNormals();g.computeBoundingSphere();return g;}
+ geometry(){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(this.p,3));g.setAttribute('color',new THREE.Float32BufferAttribute(this.c,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(this.u,2));g.setAttribute('organ',new THREE.Float32BufferAttribute(this.o,1));g.setAttribute('surface',new THREE.Float32BufferAttribute(this.s,1));g.setIndex(this.idx);g.computeVertexNormals();g.computeBoundingSphere();return g;}
 }
 function makeWheat(state,seed,detail=false){
 const dimensions=()=>cropDimensions(state),palette=()=>colors3(state);const r=rng(seed),b=new Build(),p=palette(),d=dimensions(),h=d.h,rot=r()*Math.PI*2,lean=(r()-.5)*.075;
@@ -162,5 +165,83 @@ if(s.season==='summer')for(const branch of soybeanBranches(s)){const a=branch.an
 // A compact bud sits just above the final leaf node, including arrested shoots.
 ellipsoid(b,V(.014,h,0),.00065,.0011,.00065,p.node,detail,0);
 if(detail){soybeanAxisFuzz(b,V(),V(.008,h*.45,0),.004*stemWidth,.003*stemWidth,180,p,r);soybeanAxisFuzz(b,V(.008,h*.45,0),V(.013,h*.88,0),.003*stemWidth,.0012*stemWidth,170,p,r);soybeanAxisFuzz(b,V(.013,h*.88,0),V(.014,h,0),.0012*stemWidth,.00045*stemWidth,65,p,r);}}
-export function createPlantGeometry(state,seed,detail=false){state={...state,plantSeed:seed};if((state.crop||'wheat')==='wheat'){const g=makeWheat(state,seed,detail);g.userData={crop:'wheat',termination:shootTermination(state)};return g;}const b=new Build(),r=rng(seed);if(state.crop==='barley')barley(b,state,r,detail);else if(state.crop==='maize')maize(b,state,r,detail);else if(state.crop==='sunflower')sunflower(b,{...state,plantSeed:seed},r,detail);else soybean(b,state,r,detail);const g=b.geometry();g.userData={crop:state.crop,detail,residue:cropDimensions(state).residue,termination:shootTermination(state)};return g;}
-export function createRootGeometry(state){if(profile(state).cereal||state.crop==='maize')return cerealRoots(state);const b=new Build(),r=rng(state.seed+978),p=colors3(state),d=cropDimensions(state),depth=state.season==='spring'?.20:.44,rad=(state.crop==='sunflower'?.006:.004)*organVariation(state,'root-collar').width;let pts=[],rr=[];for(let k=0;k<=20;k++){let t=k/20;pts.push(V(Math.sin(t*7)*.008,-depth*t,Math.sin(t*5)*.005));rr.push(rad*(1-t*.96));}b.tube(pts,rr,p.root,8,5);for(let k=2;k<19;k++){const rootq=organVariation(state,'root',k);let a=r()*Math.PI*2,len=(.04+r()*.12)*rootq.length,base=pts[k],end=base.clone().add(V(Math.cos(a)*len,-len*.45,Math.sin(a)*len)),mid=base.clone().lerp(end,.5).add(V(0,.01,0));b.tube([base,mid,end],[rad*.3*rootq.width,rad*.12*rootq.width,.0001],p.root,5,5);for(let j=1;j<5;j++){let t=j/5,q=base.clone().lerp(end,t);segment(b,q,q.clone().add(V((r()-.5)*.03,-.02,(r()-.5)*.03)),.0002,p.root,false,5);if(state.crop==='soybean'&&!d.residue&&k<12&&j<3){const nodule=organVariation(state,'nodule',k*4+j);ellipsoid(b,q,.0024*nodule.width,.0028*nodule.length,.0021*nodule.depth,col('#9c9270'),false,10);}}}return b.geometry();}
+function regionalLeafGeometry(b,o,detail){
+ const steps=detail?(o.shape==='serrate'?64:o.shape==='banana'||o.shape==='ruffled'?56:36):10,cross=detail?10:4,start=b.p.length/3,color=col(o.color);
+ for(let i=0;i<=steps;i++)for(let j=0;j<=cross;j++){
+  const t=i/steps,v=j/cross*2-1,shade=.035*(1-Math.abs(v))+.012*Math.sin(t*18);
+  b.vertex(V(...regionalLeafPoint(o,t,v)),mix(color,col('#a4b97c'),shade),j/cross,t,o.organ);
+ }
+ for(let i=0;i<steps;i++)for(let j=0;j<cross;j++){
+  // Sparse banana edge splits stop short of the midrib; they do not reseed the leaf.
+  if(o.shape==='banana'&&i>steps*.2&&i<steps*.9&&Math.floor(i/steps*29)%7===0&&(j===0||j===cross-1))continue;
+  const a=start+i*(cross+1)+j,c=a+cross+1;b.tri(a,c,a+1);b.tri(a+1,c,c+1);
+ }
+ if(!detail)return;
+ const point=(t,v)=>V(...regionalLeafPoint(o,t,v)).add(V(0,.00015,0)),vein=mix(color,col('#b8c88c'),.32),baseSurface=b.surfaceType;b.surfaceType=SURFACE.STEM;
+ const rib=[];for(let k=0;k<=24;k++)rib.push(point(k/24,0));
+ b.tube(rib,rib.map((_,i)=>Math.min(.0012,o.width*.012)*(1-i/26)),vein,4,o.organ);
+ for(let k=1;k<=8;k++)for(const side of [-1,1]){
+  const t=k/10,points=[];for(let j=0;j<=7;j++){const u=j/7;points.push(point(Math.min(.99,t+u*.11),side*u*.93));}
+  b.tube(points,points.map((_,j)=>Math.min(.0003,o.width*.003)*(1-j/9)),vein,3,o.organ);
+ }
+ b.surfaceType=baseSurface;
+}
+function regionalBodyGeometry(b,o,detail){
+ const small=Math.max(...o.size)<.006,grain=o.surface===SURFACE.GRAIN,pod=o.shape==='pod',rings=detail?(small?14:grain?32:pod?96:64):3,sides=detail?(small?12:grain?32:pod?56:48):5,start=b.p.length/3,color=col(o.color);
+ for(let i=0;i<=rings;i++)for(let j=0;j<=sides;j++){
+  const t=i/rings,a=j/sides*Math.PI*2,shade=.03*Math.cos(a)+.012*Math.sin(t*17);
+  b.vertex(V(...regionalBodyPoint(o,t,a)),mix(color,col(shade>0?'#d6cd95':'#685e38'),Math.abs(shade)),j/sides+(o.lintCore?2:0),t,o.organ);
+ }
+ for(let i=0;i<rings;i++)for(let j=0;j<sides;j++){const a=start+i*(sides+1)+j,c=a+sides+1;b.tri(a,c,a+1);b.tri(a+1,c,c+1);}
+}
+function regionalTissueGeometry(b,o,detail){
+ const corolla=o.type==='corolla',small=(corolla?o.radius:o.length)<.006,rows=detail?(small?24:corolla?56:48):6,columns=detail?(small?(corolla?48:12):corolla?96:20):corolla?16:2,start=b.p.length/3,color=col(o.color),base=col(o.baseColor||o.color),point=corolla?regionalCorollaPoint:regionalPatchPoint;
+ for(let i=0;i<=rows;i++)for(let j=0;j<=columns;j++){
+  const t=i/rows,v=corolla?j/columns*Math.PI*2:j/columns*2-1,p=point(o,t,v),shade=.015*Math.cos(t*47+v*3);
+  b.vertex(V(...p),mix(mix(base,color,Math.min(1,t*3)),col('#eee4c7'),shade),j/columns,t,o.organ);
+ }
+ for(let i=0;i<rows;i++)for(let j=0;j<columns;j++){const a=start+i*(columns+1)+j,c=a+columns+1;b.tri(a,c,a+1);b.tri(a+1,c,c+1);}
+ if(!detail||corolla||o.shape==='valve'||o.shape==='pigment')return;
+ // Fine raised veins follow the deformed tissue; they cannot float above a
+ // differently rotated petal. Relief stays below the visible fold amplitude.
+ const vein=mix(color,base,.28),R=Math.min(.000045,o.width*.0013);
+ for(const v of [-.66,-.33,0,.33,.66]){
+  const points=Array.from({length:22},(_,i)=>V(...regionalPatchPoint(o,.05+i/21*.89,v*(.3+.7*i/21))).addScaledVector(V(...o.normal),.000006));
+  b.tube(points,points.map((_,i)=>R*(1-i/24)),vein,3,o.organ);
+ }
+}
+function regionalFibreGeometry(b,o,detail){
+ const color=col(o.color);
+ for(let i=0;i<o.count;i++){
+  const points=regionalFibreCurve(o,i).map(p=>V(...p)),start=b.p.length/3,random=seeded(o.seed+i*37),tint=mix(color,col(i%3?'#fff9e9':'#b9b8a6'),i%3?random()*.13:random()*.15),roll=random()*Math.PI*2,reference=V(Math.cos(roll),Math.sin(roll),Math.cos(roll+1.2));
+  for(let j=0;j<points.length;j++){
+   const t=j/(points.length-1),tangent=points[Math.min(j+1,points.length-1)].clone().sub(points[Math.max(0,j-1)]).normalize(),side=new THREE.Vector3().crossVectors(tangent,reference).normalize(),width=o.radius*(.35+.65*Math.sin(Math.PI*(.05+t*.90)))*(1-t*.65);
+   for(const sign of [-1,1])b.vertex(points[j].clone().addScaledVector(side,width*sign),tint,(sign+1)*.5,t,o.organ);
+  }
+  for(let j=0;j<points.length-1;j++){const a=start+j*2;b.tri(a,a+2,a+1);b.tri(a+1,a+2,a+3);}
+ }
+}
+function regionalGeometry(state,seed,detail,roots=false){
+ const b=new Build();
+ for(const organ of regionalPlant(state,seed,detail,roots)){
+  if(detail&&organ.proxyOnly){b.surfaceType=organ.surface;regionalBodyGeometry(b,{...organ,size:organ.size.map(v=>v*.65),shape:'round',lintCore:true},true);continue;}
+  if(!detail&&organ.type==='ball'&&organ.surface===SURFACE.GRAIN&&organ.sample%3)continue;
+  b.surfaceType=organ.surface;
+  if(organ.type==='tube')b.tube(organ.points.map(p=>V(...p)),organ.radii,col(organ.color),detail?10:5,organ.organ);
+  else if(organ.type==='ball')regionalBodyGeometry(b,organ,detail);
+  else if(organ.type==='patch'||organ.type==='corolla')regionalTissueGeometry(b,organ,detail);
+  else if(organ.type==='fibres')regionalFibreGeometry(b,organ,detail);
+  else regionalLeafGeometry(b,organ,detail);
+ }
+ const g=b.geometry();g.userData={crop:state.crop,detail,residue:cropDimensions(state).residue,termination:shootTermination(state)};return g;
+}
+export function createPlantGeometry(state,seed,detail=false){
+ if(profile(state).region){const model=profile(state).model;if(['barley','maize','sunflower','soybean'].includes(model)){const g=createPlantGeometry({...state,crop:model},seed,detail);g.userData.crop=state.crop;return g;}return regionalGeometry({...state,plantSeed:seed},seed,detail);}
+state={...state,plantSeed:seed};if((state.crop||'wheat')==='wheat'){const g=makeWheat(state,seed,detail);g.userData={crop:'wheat',termination:shootTermination(state)};return g;}const b=new Build(),r=rng(seed);if(state.crop==='soybean')b.surfaceMap={2:SURFACE.POD};if(state.crop==='barley')barley(b,state,r,detail);else if(state.crop==='maize')maize(b,state,r,detail);else if(state.crop==='sunflower')sunflower(b,{...state,plantSeed:seed},r,detail);else soybean(b,state,r,detail);const g=b.geometry();g.userData={crop:state.crop,detail,residue:cropDimensions(state).residue,termination:shootTermination(state)};return g;}
+export function createRootGeometry(state){if(profile(state).region){const model=profile(state).model;return ['barley','maize','sunflower','soybean'].includes(model)?createRootGeometry({...state,crop:model}):regionalGeometry(state,state.seed,true,true);}if(profile(state).cereal||state.crop==='maize')return cerealRoots(state);const b=new Build(),r=rng(state.seed+978),p=colors3(state),d=cropDimensions(state),depth=state.season==='spring'?.20:.44,rad=(state.crop==='sunflower'?.006:.004)*organVariation(state,'root-collar').width;let pts=[],rr=[];for(let k=0;k<=20;k++){let t=k/20;pts.push(V(Math.sin(t*7)*.008,-depth*t,Math.sin(t*5)*.005));rr.push(rad*(1-t*.96));}b.tube(pts,rr,p.root,8,5);for(let k=2;k<19;k++){const rootq=organVariation(state,'root',k);let a=r()*Math.PI*2,len=(.04+r()*.12)*rootq.length,base=pts[k],end=base.clone().add(V(Math.cos(a)*len,-len*.45,Math.sin(a)*len)),mid=base.clone().lerp(end,.5).add(V(0,.01,0));b.tube([base,mid,end],[rad*.3*rootq.width,rad*.12*rootq.width,.0001],p.root,5,5);for(let j=1;j<5;j++){let t=j/5,q=base.clone().lerp(end,t);segment(b,q,q.clone().add(V((r()-.5)*.03,-.02,(r()-.5)*.03)),.0002,p.root,false,5);if(state.crop==='soybean'&&!d.residue&&k<12&&j<3){const nodule=organVariation(state,'nodule',k*4+j);ellipsoid(b,q,.0024*nodule.width,.0028*nodule.length,.0021*nodule.depth,col('#9c9270'),false,10);}}}return b.geometry();}
+
+// Frame the actual organ bounds, including broad canopies and low rosettes.
+export function wholePlantFrame(object){
+ const sphere=new THREE.Box3().setFromObject(object).getBoundingSphere(new THREE.Sphere());
+ return {target:sphere.center,span:Math.max(.3,sphere.radius*2.8)};
+}

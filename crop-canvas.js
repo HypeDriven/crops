@@ -2,7 +2,10 @@
 Required Notice: Copyright 2026 Hype Driven Development Inc. (https://hypedriven.com)
 PolyForm Noncommercial 1.0.0 with additional permission; see LICENSE.
 */
-import { cropDimensions, cropColors, seeded, leafDevelopment, sunflowerHead, maizeEar, shootTermination, mixHex, soybeanAxisNodes, soybeanLeafSurface, soybeanPodShape, soybeanPodSurface, sunflowerDiskLayout, fieldPlantTraits, organVariation, axisNodeFractions, soybeanBranches, cerealSpike, sunflowerRays, maizeKernel } from './crops.js';
+import { profile, cropDimensions, cropColors, seeded, leafDevelopment, sunflowerHead, maizeEar, shootTermination, mixHex, soybeanAxisNodes, soybeanLeafSurface, soybeanPodShape, soybeanPodSurface, sunflowerDiskLayout, fieldPlantTraits, organVariation, axisNodeFractions, soybeanBranches, cerealSpike, sunflowerRays, maizeKernel } from './crops.js';
+import { regionalPlant } from './regional-plants.js';
+import { regionalFibreCurve } from './reproductive-organs.js';
+import { SURFACE, regionalLeafPoint, regionalBodyPoint, regionalPatchPoint,regionalCorollaPoint,portablePoint } from './crop-surfaces.js';
 const stroke=(c,pts,color,width)=>{c.beginPath();c.moveTo(...pts[0]);for(let i=1;i<pts.length;i++)c.lineTo(...pts[i]);c.strokeStyle=color;c.lineWidth=Math.max(.18,width);c.stroke();};
 function oval(c,x,y,rx,ry,color,angle=0){c.beginPath();c.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),angle,0,Math.PI*2);c.fillStyle=color;c.fill();}
 function leaf(c,x,y,L,W,angle,p,detail,serrate=false,grass=false,dev={}){W*=dev.aspectRatio??1;angle+=(dev.angle||0)+(dev.pitch||0);c.save();c.translate(x,y);c.rotate(angle);const seg=detail?42:14,left=[],right=[];for(let i=0;i<=seg;i++){let t=i/seg,w=(i===0||i===seg)?0:W*.5*Math.pow(Math.sin(Math.PI*Math.pow(t,serrate?.55:.85)),.72)*(1-(dev.fold||0)*.65);if(serrate)w*=1+.035*Math.cos(t*Math.PI*32);let cy=-L*(.20+(dev.curl||0)*.30)*Math.sin(t*Math.PI)+L*.10*t*t;let notch=serrate?.07*L*Math.pow(1-t,10):0;left.push([t*L-notch,cy-w]);right.push([t*L-notch,cy+w*(1+(dev.asymmetry||0))]);}c.beginPath();c.moveTo(...left[0]);for(const a of left)c.lineTo(...a);for(const a of right.reverse())c.lineTo(...a);c.closePath();let g=c.createLinearGradient(0,-W*.5,0,W*.5);g.addColorStop(0,p.edge);g.addColorStop(.42,p.leaf);g.addColorStop(.53,p.vein);g.addColorStop(1,p.leaf);c.fillStyle=g;c.fill();c.strokeStyle=p.edge;c.lineWidth=Math.max(.25,W*.012);c.stroke();if(detail){c.save();c.clip();stroke(c,[[0,0],[L*.4,-L*.17],[L,.01*L]],p.vein,W*(grass?.035:.008));if(serrate)for(let sign of[-1,1])stroke(c,[[0,0],[L*.2,-L*.12+sign*W*.22],[L*.5,-L*.17+sign*W*.32]],p.vein,W*.006);for(let i=1;i<9;i++){let t=i/10,x=t*L,cy=-L*.20*Math.sin(t*Math.PI)+L*.10*t*t,ww=W*.43*Math.sin(t*Math.PI);if(grass){c.beginPath();c.moveTo(0,(i-5)*W*.075);c.quadraticCurveTo(L*.5,-L*.19+(i-5)*W*.07,L,.01*L);c.strokeStyle=p.vein;c.globalAlpha=.4;c.lineWidth=W*.009;c.stroke();}else for(let sign of[-1,1]){stroke(c,[[x,cy],[x+L*.04,cy+sign*ww*.5],[x+L*.11,cy+sign*ww]],p.vein,W*.004);for(let k=1;k<3;k++)stroke(c,[[x+L*.04,cy+sign*ww*k/3],[x+L*.09,cy+sign*ww*(k+.4)/3]],p.edge,W*.0018);}}c.restore();}c.restore();}
@@ -74,5 +77,70 @@ function pod(x,y,side,id){soybeanPod2D(c,s,x,y,side,p,scale,r,detail,id);}
 let n=s.season==='summer'?7:3,nodes=soybeanAxisNodes(s,d.h,n,Math.floor(r()*100000));for(let i=0;i<n;i++){let {t,dev}=nodes[i],side=i%2?-1:1,x=.014*t*scale,y=-H*t,L=Math.min(.11,d.h*.40)*dev.size*scale;trifol(x,y,side,L,dev);if(s.season==='summer'&&i>0&&i<n-1){if(s.maturity<.3){for(let k=0;k<3;k++){const flower=organVariation(s,'flower',k,dev.seed);oval(c,x+side*(.012+k*.003)*scale,y+k*.004*scale,.003*flower.width*scale,.004*flower.length*scale,'#b38cac');oval(c,x+side*(.012+k*.003)*scale,y+(k*.004+.003)*scale,.002*flower.width*scale,.002*flower.length*scale,'#d7b4d2');}}else for(let k=0;k<2;k++)pod(x,y,side*(k?-.7:1),dev.seed+k*37);}}
 if(s.season==='summer')for(const branch of soybeanBranches(s)){const projection=p=>(p[0]+p[2]*.45)*scale,side=Math.cos(branch.angle)>=0?1:-1,x=projection(branch.end),y=-branch.end[1]*scale,sx=projection(branch.start),sy=-branch.start[1]*scale;stroke(c,[[sx,sy],[sx+(x-sx)*.7,sy+(y-sy)*.7]],p.stem,branch.radius*1.25*scale);stroke(c,[[sx+(x-sx)*.7,sy+(y-sy)*.7],[x,y]],p.stem,branch.radius*.42*scale);const length=Math.hypot(...branch.end.map((v,i)=>v-branch.start[i])),branchNodes=soybeanAxisNodes(s,length,4,branch.nodeSeed);for(let k=0;k<branchNodes.length;k++){const {t,dev}=branchNodes[k],xx=sx+(x-sx)*t,yy=sy+(y-sy)*t;trifol(xx,yy,side,.080*scale*dev.size,dev);if(s.maturity>.3&&k<branchNodes.length-1)pod(xx,yy,side,dev.seed);}oval(c,x,y,.00065*scale,.0011*scale,p.node);if(detail)for(let k=0;k<100;k++){const t=r(),xx=sx+(x-sx)*t,yy=sy+(y-sy)*t,sign=k%2?1:-1;canvasHair(c,xx+sign*branch.radius*.5*scale,yy,sign,-.3,(.0004+r()*.0006)*scale,scale,'#c6caaa',r,.6);}}oval(c,.014*scale,-H,.00065*scale,.0011*scale,p.node);if(detail)for(let k=0;k<330;k++){const t=r(),sign=k%2?1:-1,xx=.014*t*scale+sign*(.0035-.003*t)*stemWidth*scale;canvasHair(c,xx,-H*t,sign,-.3,(.0004+r()*.0006)*scale,scale,'#c6caaa',r,.6);}}
 
-export function drawCrop(c,s,x,y,scale,seed,detail=true,sway=0,rotation=0){const r=seeded(seed);s={...s,plantSeed:seed};c.save();c.translate(x,y);c.rotate(rotation);c.transform(1,0,-sway/Math.max(1,cropDimensions(s).h*scale),1,0,0);if(s.crop==='barley')barley(c,s,scale,r,detail);else if(s.crop==='maize')maize(c,s,scale,r,detail);else if(s.crop==='sunflower')sunflower(c,s,scale,r,detail);else soybean(c,s,scale,r,detail);c.restore();}
-export function drawTaproots(c,s,x,y,scale){const r=seeded(s.seed+978),depth=s.season==='spring'?.2:.44,p=cropColors(s),d=cropDimensions(s);c.save();c.translate(x,y);const trunk=[];for(let i=0;i<21;i++){let t=i/20;trunk.push([Math.sin(t*7)*.008*scale,depth*t*scale]);}stroke(c,trunk,p.root,(s.crop==='sunflower'?.008:.005)*organVariation(s,'root-collar').width*scale);for(let i=2;i<19;i++){const rootq=organVariation(s,'root',i);let t=i/20,a=r()<.5?-1:1,L=(.04+r()*.12)*rootq.length*scale,start=trunk[i],end=[start[0]+a*L,start[1]+L*.45];stroke(c,[start,[start[0]+a*L*.5,start[1]+L*.1],end],p.root,.0009*scale);for(let j=1;j<5;j++){let xx=start[0]+a*L*j/5,yy=start[1]+L*.45*j/5;stroke(c,[[xx,yy],[xx+a*.014*scale,yy+.02*scale]],p.root,.0002*scale);if(s.crop==='soybean'&&!d.residue&&i<12&&j<3){const nodule=organVariation(s,'nodule',i*4+j);oval(c,xx,yy,.0024*nodule.width*scale,.0028*nodule.length*scale,'#a29873');}}}c.restore();}
+function drawRegional(c,s,x,y,scale,seed,detail,roots=false,sway=0,rotation=0){
+ const project=p=>portablePoint(p,scale);
+ c.save();c.translate(x,y);c.rotate(rotation);c.transform(1,0,-sway/Math.max(1,cropDimensions(s).h*scale),1,0,0);
+ const organs=regionalPlant(s,seed,detail,roots);
+ for(const source of organs){
+  const o=detail&&source.proxyOnly?{...source,size:source.size.map(v=>v*.65),shape:'round',lintCore:true}:source;
+  if(!detail&&o.type==='ball'&&o.surface===SURFACE.GRAIN&&o.sample%3)continue;
+  if(o.type==='tube'){
+   const pts=o.points.map(project);
+   for(let i=1;i<pts.length;i++){
+    const steps=4;
+    for(let j=0;j<steps;j++){
+     const point=t=>pts[i-1].map((v,k)=>v+(pts[i][k]-v)*t),t=(j+.5)/steps;
+     stroke(c,[point(j/steps),point((j+1)/steps)],o.color,(o.radii[i-1]*(1-t)+o.radii[i]*t)*2*scale);
+    }
+   }
+   if(detail&&[SURFACE.BARK,SURFACE.PALM].includes(o.surface))stroke(c,pts,mixHex(o.color,'#c3b28b',.3),o.radii[0]*.28*scale);
+  }else if(o.type==='ball'){
+   const N=detail?24:10,points=[],a=Math.atan(.35);
+   for(let i=0;i<=N;i++)points.push(project(regionalBodyPoint(o,i/N,a)));
+   for(let i=N;i>=0;i--)points.push(project(regionalBodyPoint(o,i/N,a+Math.PI)));
+   c.beginPath();c.moveTo(...points[0]);for(const p of points)c.lineTo(...p);c.closePath();
+   const [xx,yy]=project(o.at),width=Math.max(.1,o.size[0]*scale),g=c.createLinearGradient(xx-width,yy,xx+width,yy);
+   g.addColorStop(0,mixHex(o.color,'#4b482c',.28));g.addColorStop(.4,mixHex(o.color,'#fff4d3',.13));g.addColorStop(1,mixHex(o.color,'#3d432b',.32));c.fillStyle=g;
+   if(o.lintCore){const soft=c.createRadialGradient(xx,yy,0,xx,yy,Math.max(...o.size)*scale);soft.addColorStop(0,'rgba(235,232,218,1)');soft.addColorStop(.55,'rgba(235,232,218,1)');soft.addColorStop(.85,'rgba(235,232,218,.45)');soft.addColorStop(1,'rgba(235,232,218,0)');c.fillStyle=soft;}
+   c.fill();
+   if(detail&&o.ribs)for(let k=0;k<o.ribCount;k++){const pts=[];for(let j=1;j<20;j++)pts.push(project(regionalBodyPoint(o,j/20,k/o.ribCount*Math.PI*2)));stroke(c,pts,mixHex(o.color,'#665532',.3),Math.max(.25,scale*.00035));}
+  }else if(o.type==='fibres'){
+   const stride=Math.max(1,Math.floor(o.count/(detail?(o.mode==='lint'?1800:800):24)));
+   for(let i=0;i<o.count;i+=stride){const points=regionalFibreCurve(o,i).map(project);stroke(c,points,i%4?o.color:mixHex(o.color,'#a9a897',.22),Math.max(detail?.22:.18,o.radius*2*scale));}
+  }else if(o.type==='patch'||o.type==='corolla'){
+   const corolla=o.type==='corolla',rows=detail?28:6,columns=detail?(corolla?40:10):corolla?12:2,point=corolla?regionalCorollaPoint:regionalPatchPoint;
+   for(let i=0;i<rows;i++)for(let j=0;j<columns;j++){
+    const param=k=>corolla?k/columns*Math.PI*2:k/columns*2-1,pts=[point(o,i/rows,param(j)),point(o,(i+1)/rows,param(j)),point(o,(i+1)/rows,param(j+1)),point(o,i/rows,param(j+1))].map(project),t=(i+.5)/rows;
+    c.beginPath();c.moveTo(...pts[0]);for(const p of pts.slice(1))c.lineTo(...p);c.closePath();c.fillStyle=mixHex(o.baseColor||o.color,o.color,Math.min(1,t*3));c.fill();
+   }
+   if(detail&&!corolla)for(const v of [-.66,-.33,0,.33,.66])stroke(c,Array.from({length:22},(_,i)=>project(regionalPatchPoint(o,.05+i/21*.89,v*(.3+.7*i/21)))),mixHex(o.color,o.baseColor||'#eee4c7',.25),.24);
+  }else{
+   const N=detail?(o.shape==='serrate'?64:42):12;
+   const [xx,yy]=project(o.at),g=c.createLinearGradient(xx-o.width*scale*.5,yy,xx+o.width*scale*.5,yy-o.length*scale*.1);
+   g.addColorStop(0,mixHex(o.color,'#2f4c29',.3));g.addColorStop(.52,mixHex(o.color,'#c1ce96',.18));g.addColorStop(1,o.color);c.fillStyle=g;
+   // Union projected triangles with a consistent winding. A folded blade can
+   // overlap itself in projection; a single outer contour would leave holes.
+   const bands=detail?4:2;
+   const grid=Array.from({length:N+1},(_,i)=>Array.from({length:bands+1},(_,j)=>project(regionalLeafPoint(o,i/N,j/bands*2-1))));
+   const triangle=(a,b,d)=>{if((b[0]-a[0])*(d[1]-a[1])-(b[1]-a[1])*(d[0]-a[0])<0)[b,d]=[d,b];c.moveTo(...a);c.lineTo(...b);c.lineTo(...d);c.closePath();};
+   c.beginPath();
+   for(let i=0;i<N;i++)for(let j=0;j<bands;j++){
+    triangle(grid[i][j],grid[i+1][j],grid[i][j+1]);triangle(grid[i][j+1],grid[i+1][j],grid[i+1][j+1]);
+   }
+   c.fill();
+   if(detail){
+    const pts=[];for(let j=0;j<=24;j++)pts.push(project(regionalLeafPoint(o,j/24,0)));
+    stroke(c,pts,mixHex(o.color,'#bccb90',.42),Math.max(.35,o.width*.012*scale));
+    for(let k=1;k<=8;k++)for(let side of [-1,1]){
+     const pts=[];for(let j=0;j<=7;j++){const u=j/7;pts.push(project(regionalLeafPoint(o,Math.min(.99,k/10+u*.11),side*u*.93)));}
+     stroke(c,pts,mixHex(o.color,'#a9bb7e',.28),Math.max(.22,o.width*.003*scale));
+    }
+   }
+  }
+ }
+ c.restore();
+}
+export function drawCrop(c,s,x,y,scale,seed,detail=true,sway=0,rotation=0){
+ if(profile(s).region){const model=profile(s).model;if(['barley','maize','sunflower','soybean'].includes(model))return drawCrop(c,{...s,crop:model},x,y,scale,seed,detail,sway,rotation);return drawRegional(c,s,x,y,scale,seed,detail,false,sway,rotation);}
+const r=seeded(seed);s={...s,plantSeed:seed};c.save();c.translate(x,y);c.rotate(rotation);c.transform(1,0,-sway/Math.max(1,cropDimensions(s).h*scale),1,0,0);if(s.crop==='barley')barley(c,s,scale,r,detail);else if(s.crop==='maize')maize(c,s,scale,r,detail);else if(s.crop==='sunflower')sunflower(c,s,scale,r,detail);else soybean(c,s,scale,r,detail);c.restore();}
+export function drawTaproots(c,s,x,y,scale){if(profile(s).region){const model=profile(s).model;if(['barley','maize','sunflower','soybean'].includes(model))return drawTaproots(c,{...s,crop:model},x,y,scale);return drawRegional(c,s,x,y,scale,s.seed,true,true);}const r=seeded(s.seed+978),depth=s.season==='spring'?.2:.44,p=cropColors(s),d=cropDimensions(s);c.save();c.translate(x,y);const trunk=[];for(let i=0;i<21;i++){let t=i/20;trunk.push([Math.sin(t*7)*.008*scale,depth*t*scale]);}stroke(c,trunk,p.root,(s.crop==='sunflower'?.008:.005)*organVariation(s,'root-collar').width*scale);for(let i=2;i<19;i++){const rootq=organVariation(s,'root',i);let t=i/20,a=r()<.5?-1:1,L=(.04+r()*.12)*rootq.length*scale,start=trunk[i],end=[start[0]+a*L,start[1]+L*.45];stroke(c,[start,[start[0]+a*L*.5,start[1]+L*.1],end],p.root,.0009*scale);for(let j=1;j<5;j++){let xx=start[0]+a*L*j/5,yy=start[1]+L*.45*j/5;stroke(c,[[xx,yy],[xx+a*.014*scale,yy+.02*scale]],p.root,.0002*scale);if(s.crop==='soybean'&&!d.residue&&i<12&&j<3){const nodule=organVariation(s,'nodule',i*4+j);oval(c,xx,yy,.0024*nodule.width*scale,.0028*nodule.length*scale,'#a29873');}}}c.restore();}

@@ -4,11 +4,11 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import { createHash } from 'node:crypto';
-import { createPlantGeometry, createRootGeometry, Build } from '../crop-model.js';
+import { createPlantGeometry, createRootGeometry, Build, wholePlantFrame } from '../crop-model.js';
 import { CROPS, cropDimensions, inspection, anatomyLabels, leafDevelopment, shootTermination, maizeEar, soybeanAxisNodes, seeded, soybeanPodShape, soybeanPodSurface, sunflowerHead, sunflowerDiskLayout, fieldPlantTraits, organVariation, axisNodeFractions, soybeanBranches, cerealSpike, sunflowerRays, maizeKernel } from '../crops.js';
 import { drawCrop, drawTaproots } from '../crop-canvas.js';
 let cases=0;
-function verify(g,label){const count=g.getAttribute('position').count;assert(count>0,label);for(const name of ['position','normal','color','uv','organ']){const a=g.getAttribute(name);assert(a,label+': '+name);assert(Array.from(a.array).every(Number.isFinite),label+': finite '+name);}assert(Array.from(g.index.array).every(i=>i>=0&&i<count),label+': indices');assert(Number.isFinite(g.boundingSphere.radius)&&g.boundingSphere.radius>0,label+': bounds');}
+function verify(g,label){const count=g.getAttribute('position').count;assert(count>0,label);for(const name of ['position','normal','color','uv','organ','surface']){const a=g.getAttribute(name);assert(a,label+': '+name);assert.equal(a.count,count,label+': aligned '+name);assert(Array.from(a.array).every(Number.isFinite),label+': finite '+name);}assert(Array.from(g.index.array).every(i=>i>=0&&i<count),label+': indices');assert(Number.isFinite(g.boundingSphere.radius)&&g.boundingSphere.radius>0,label+': bounds');}
 const digest=g=>createHash('sha256').update(new Uint8Array(g.attributes.position.array.buffer)).digest('hex');
 const gradient={addColorStop(t,color){assert(Number.isFinite(t));assert.equal(typeof color,'string');}};
 const mock=new Proxy({}, {get(_,key){if(['createLinearGradient','createRadialGradient'].includes(key))return()=>gradient;if(key==='ellipse')return(...a)=>{assert(a.every(Number.isFinite));assert(a[2]>=0&&a[3]>=0);};return(...a)=>{for(const v of a)if(typeof v==='number')assert(Number.isFinite(v),'Canvas '+String(key));};},set(){return true;}});
@@ -33,9 +33,9 @@ for(const crop of Object.keys(CROPS)){
  const s={crop,season:'spring',maturity:.65,seed:1847},old=leafDevelopment(s,0,8,1),middle=leafDevelopment(s,4,8,1),young=leafDevelopment(s,7,8,1);
  assert(old.relativeAge>middle.relativeAge&&middle.relativeAge>young.relativeAge);
  assert(young.expansion<middle.expansion&&young.size<middle.size&&young.fold>middle.fold,'Youngest leaves are smaller and folded');
- assert(['leaf-whorl','young-simple-leaves','young-trifoliate'].includes(shootTermination(s)));
+ assert(['leaf-whorl','young-simple-leaves','young-trifoliate','spear','rosette-heart'].includes(shootTermination(s)));
  s.season='summer';s.maturity=.8;
- assert(!shootTermination(s).startsWith('young'),'Reproductive apex does not grow fictitious terminal leaves');
+ if(cropDimensions(s).reproductive&&(!CROPS[crop].region||CROPS[crop].cereal||['banana','cluster','flax','poppy','potato','maize','sunflower'].includes(CROPS[crop].model)))assert(!shootTermination(s).startsWith('young'),'Terminal inflorescences replace the vegetative apex');
 }
 const b=new Build();b.leaf(new THREE.Vector3(),.25,.02,0,.4,new THREE.Color('#638344'),true);
 const pg=b.geometry(),pp=pg.attributes.position;const last=new THREE.Vector3().fromBufferAttribute(pp,pp.count-1);
@@ -101,3 +101,67 @@ for(const seed of [1,31,1847,9923]){
 console.log('Passed organ-size distributions, aspect ratios, correlation, nonuniform internodes, identity stability, maximum-variation meshes/Canvas, and reproductive containment.');
 
 for(const seed of [1,1847,9923]){const s={crop:'maize',season:'summer',maturity:.65,seed,variation:1},nodes=axisNodeFractions(s,Array.from({length:15},(_,i)=>.07+i/14*.84)),h=cropDimensions(s).h;assert.equal(maizeEar(s).base[1],h*nodes[8],'Primary ear stays at a varied leaf axil');assert.equal(maizeEar(s,true).base[1],h*nodes[6],'Secondary ear stays at a lower axil');}
+
+// The requested geographic collection has exactly three entries per region.
+const {REGIONS,REGIONAL_CROPS}=await import('../regional-crops.js');
+const {regionalPlant}=await import('../regional-plants.js');
+assert.equal(REGIONS.length,25);assert.equal(REGIONAL_CROPS.length,75);
+assert.equal(new Set(REGIONAL_CROPS.map(p=>p.id)).size,75);
+assert.equal(Object.keys(CROPS).length,80);
+for(const region of REGIONS)assert.equal(REGIONAL_CROPS.filter(p=>p.region===region.id).length,3,region.name);
+for(const p of REGIONAL_CROPS){
+ const s={crop:p.id,season:'summer',maturity:.65,seed:1847};
+ assert(p.name&&p.latin&&p.family&&p.note&&p.model,p.id+' complete metadata');
+ assert.equal((p.defaultDensity-p.min)%p.step,0,p.id+' default density aligns with slider');
+ for(const part of ['root','whole','leaf','ear'])assert(inspection(s,part).desc,p.id+' inspection description');
+ const winter={...s,season:'winter'};
+ if(['evergreen','perennial'].includes(p.life))assert(!cropDimensions(winter).residue,p.id+' perennial stays alive');
+ if(!p.cereal)drawTaproots(mock,s,0,0,400);
+ if(!['barley','maize','sunflower','soybean'].includes(p.model))for(const organ of regionalPlant(s,1847,true,true)){
+  const points=organ.points||[organ.at];assert(points.every(p=>p[1]>=-.45),'Regional roots respect depth limit');
+ }
+ const first=createPlantGeometry(s,1847,false),other=createPlantGeometry({...s,variation:.6},9923,false);
+ verify(other,p.id+' alternative seed');
+ const mesh=new THREE.Mesh(first),frame=wholePlantFrame(mesh),camera=new THREE.PerspectiveCamera(48,1280/900,.004,200);
+ camera.position.copy(frame.target).add(new THREE.Vector3(frame.span*.48,frame.span*.17,frame.span*.85));camera.lookAt(frame.target);camera.updateMatrixWorld();
+ const positions=first.attributes.position,point=new THREE.Vector3();
+ for(let i=0;i<positions.count;i++){point.fromBufferAttribute(positions,i).project(camera);assert(Math.abs(point.x)<1&&Math.abs(point.y)<1,p.id+' whole specimen fits camera');}
+ mesh.material.dispose();
+ assert.notEqual(digest(first),digest(other),p.id+' variation affects geometry');first.dispose();other.dispose();
+}
+for(const [id,organ] of [['r09-potato',5],['r23-taro',5],['r14-pearl',2],['r11-date',2]]){
+ const state={crop:id,season:'summer',maturity:.65,seed:1847};
+ const g=organ===5?createRootGeometry(state):createPlantGeometry(state,1847,true);
+ assert(Array.from(g.attributes.organ.array).includes(organ),id+' expected harvest organ');g.dispose();
+}
+console.log('Passed 25 regions × 3 regional forms, metadata, perennial phases, regional root drawings, seed variation, and harvest organ checks.');
+
+// Surface categories, view framing, geometry budgets and stable organ layouts.
+const {SURFACE,regionalLeafPoint,regionalBodyPoint,portablePoint}=await import('../crop-surfaces.js');
+const {regionalStudy}=await import('../regional-plants.js');
+const surfaces=new Set();
+for(const p of REGIONAL_CROPS){
+ const s={crop:p.id,season:'summer',maturity:.65,seed:1847};
+ const low=createPlantGeometry(s,1847,false),high=createPlantGeometry(s,1847,true);
+ for(const a of [low.attributes.surface.array,high.attributes.surface.array])for(const v of a){assert(Number.isInteger(v)&&v>=0&&v<=11,p.id+' valid surface type');surfaces.add(v);}
+ if(!['barley','maize','sunflower','soybean'].includes(p.model)){
+  assert(high.attributes.position.count>low.attributes.position.count*1.5,p.id+' specimen has more detail');
+  assert(low.attributes.position.count<24000,p.id+' field mesh budget');
+  const field=regionalPlant(s,1847,false),detail=regionalPlant(s,1847,true);
+  assert.deepEqual(field.filter(o=>o.type==='leaf'),detail.filter(o=>o.type==='leaf'&&!o.detailOnly),p.id+' detail preserves each blade');
+  for(const part of ['leaf','ear']){const view=regionalStudy(s,part);if(!view)continue;assert(view.target.every(Number.isFinite)&&view.span>=.06);assert(view.labels.every(a=>a.slice(1).every(Number.isFinite)));}
+  const blade=detail.find(o=>o.type==='leaf');if(blade){
+   for(const t of [0,1]){const a=regionalLeafPoint(blade,t,-1),b=regionalLeafPoint(blade,t,1);assert(Math.hypot(...a.map((v,k)=>v-b[k]))<1e-8,p.id+' closed leaf tips');}
+  }
+ }
+ low.dispose();high.dispose();
+}
+const rootSurfaces=createRootGeometry({crop:'r09-potato',season:'summer',maturity:.65,seed:1847});
+for(const v of rootSurfaces.attributes.surface.array)surfaces.add(v);rootSurfaces.dispose();
+for(const type of Object.values(SURFACE))assert(surfaces.has(type),'Surface category rendered: '+type);
+const pod={at:[0,0,0],size:[.01,.04,.008],shape:'pod'};
+assert(Math.abs(regionalBodyPoint(pod,0,0)[0])<1e-8&&Math.abs(regionalBodyPoint(pod,1,0)[0])<1e-8,'Pod ends close');
+const soySurface=createPlantGeometry({crop:'soybean',season:'summer',maturity:.65,seed:1847},1847,true);assert(Array.from(soySurface.attributes.surface.array).includes(SURFACE.POD),'Original soybean uses pod shading');soySurface.dispose();
+console.log('Passed material categories, specimen/field detail separation, stable leaves, mesh budgets, closed blade tips, pod ends, and organ-following inspection views.');
+
+const projected=portablePoint([1,2,3]);assert(Math.abs(projected[0]-2.05)<1e-10&&Math.abs(projected[1]+1.64)<1e-10,'Portable organs, labels and camera targets share a projection');
